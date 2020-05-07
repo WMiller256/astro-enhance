@@ -60,48 +60,48 @@ ADV_COADD  = $(BUILD)/advanced_coadd.o    \
 
 #Builds
 all: 
-   @printf "[                                               ]\n"
-   @printf "[      $(RED)Error$(WHITE) - No build target specified.       ]\n"
-   @printf "[                $(YELLOW)Exiting.$(WHITE)                       ]\n"
-   @printf "[                                               ]\n"
+	@printf "[                                               ]\n"
+	@printf "[      $(RED)Error$(WHITE) - No build target specified.       ]\n"
+	@printf "[                $(YELLOW)Exiting.$(WHITE)                       ]\n"
+	@printf "[                                               ]\n"
 
 $(BUILD)/%.o: %.c++
-   @printf "[$(CYAN)Building$(WHITE)]   $(BRIGHT)$<$(WHITE) - $(MAGENTA)Object$(WHITE)\n"
-   cd $(ABS); $(CC) -c -o $@ $<
-   @printf "[$(GREEN) Built  $(WHITE)]   $(BRIGHT)$<$(WHITE) - $(MAGENTA)Object$(WHITE)\n"
+	@printf "[$(CYAN)Building$(WHITE)]   $(BRIGHT)$<$(WHITE) - $(MAGENTA)Object$(WHITE)\n"
+	cd $(ABS); $(CC) -c -o $@ $<
+	@printf "[$(GREEN) Built  $(WHITE)]   $(BRIGHT)$<$(WHITE) - $(MAGENTA)Object$(WHITE)\n"
 
 $(MAIN).o: $(MAIN).c++
-   @printf "[$(CYAN)Building$(WHITE)]   $(BRIGHT)$<$(WHITE) - $(MAGENTA)Object$(WHITE)\n"
-   cd $(ABS); $(CC) -c $(MAIN).c++ -o $(MAIN).o
-   @printf "[$(GREEN) Built  $(WHITE)]   $(BRIGHT)$<$(WHITE) - $(MAGENTA)Object$(WHITE)\n"
+	@printf "[$(CYAN)Building$(WHITE)]   $(BRIGHT)$<$(WHITE) - $(MAGENTA)Object$(WHITE)\n"
+	cd $(ABS); $(CC) -c $(MAIN).c++ -o $(MAIN).o
+	@printf "[$(GREEN) Built  $(WHITE)]   $(BRIGHT)$<$(WHITE) - $(MAGENTA)Object$(WHITE)\n"
 
 advanced_coadd: $(ADV_COADD)
-   @printf "[$(CYAN)Linking $(WHITE)]   $(BRIGHT)$(MAIN)$(WHITE) - $(MAGENTA)Binary$(WHITE)\n"
-   cd $(ABS); $(CC) $(ADV_COADD) $(LIBDIRS) -o $(BIN)/$@ $(LIBS)
-   @printf "[$(GREEN)Linked  $(WHITE)]   $(BRIGHT)$(MAIN)$(WHITE) - $(MAGENTA)Binary$(WHITE)\n"
+	@printf "[$(CYAN)Linking $(WHITE)]   $(BRIGHT)$(MAIN)$(WHITE) - $(MAGENTA)Binary$(WHITE)\n"
+	cd $(ABS); $(CC) $(ADV_COADD) $(LIBDIRS) -o $(BIN)/$@ $(LIBS)
+	@printf "[$(GREEN)Linked  $(WHITE)]   $(BRIGHT)$(MAIN)$(WHITE) - $(MAGENTA)Binary$(WHITE)\n"
 
 coadd: $(COADD)
-   @printf "[$(CYAN)Linking $(WHITE)]   $(BRIGHT)$(MAIN)$(WHITE) - $(MAGENTA)Binary$(WHITE)\n"
-   cd $(ABS); $(CC) $(COADD) $(LIBDIRS) -o $(BIN)/$@ $(LIBS)
-   @printf "[$(GREEN)Linked  $(WHITE)]   $(BRIGHT)$(MAIN)$(WHITE) - $(MAGENTA)Binary$(WHITE)\n"
+	@printf "[$(CYAN)Linking $(WHITE)]   $(BRIGHT)$(MAIN)$(WHITE) - $(MAGENTA)Binary$(WHITE)\n"
+	cd $(ABS); $(CC) $(COADD) $(LIBDIRS) -o $(BIN)/$@ $(LIBS)
+	@printf "[$(GREEN) Linked $(WHITE)]   $(BRIGHT)$(MAIN)$(WHITE) - $(MAGENTA)Binary$(WHITE)\n"
 
 stacker: $(STACKER)
-   @printf "[$(CYAN)Linking $(WHITE)]   $(BRIGHT)$(MAIN)$(WHITE) - $(MAGENTA)Binary$(WHITE)\n"
-   cd $(ABS); $(CC) $(STACKER) $(LIBDIRS) -o $(BIN)/$@ $(LIBS)
-   @printf "[$(GREEN)Linked  $(WHITE)]   $(BRIGHT)$(MAIN)$(WHITE) - $(MAGENTA)Binary$(WHITE)\n"
+	@printf "[$(CYAN)Linking $(WHITE)]   $(BRIGHT)$(MAIN)$(WHITE) - $(MAGENTA)Binary$(WHITE)\n"
+	cd $(ABS); $(CC) $(STACKER) $(LIBDIRS) -o $(BIN)/$@ $(LIBS)
+	@printf "[$(GREEN) Linked $(WHITE)]   $(BRIGHT)$(MAIN)$(WHITE) - $(MAGENTA)Binary$(WHITE)\n"
 
 startrails: $(STARTRAILS)
-   @printf "[$(CYAN)Linking $(WHITE)]   $(BRIGHT)$(MAIN)$(WHITE) - $(MAGENTA)Binary$(WHITE)\n"
-   cd $(ABS); $(CC) $(STARTRAILS) $(LIBDIRS) -o $(BIN)/$@ $(LIBS)
-   @printf "[$(GREEN)Linked  $(WHITE)]   $(BRIGHT)$(MAIN)$(WHITE) - $(MAGENTA)Binary$(WHITE)\n"
+	@printf "[$(CYAN)Linking $(WHITE)]   $(BRIGHT)$(MAIN)$(WHITE) - $(MAGENTA)Binary$(WHITE)\n"
+	cd $(ABS); $(CC) $(STARTRAILS) $(LIBDIRS) -o $(BIN)/$@ $(LIBS)
+	@printf "[$(GREEN) Linked $(WHITE)]   $(BRIGHT)$(MAIN)$(WHITE) - $(MAGENTA)Binary$(WHITE)\n"
 
 test: $(TEST)
-   @printf "[$(CYAN)Linking $(WHITE)]   $(BRIGHT)$(MAIN)$(WHITE) - $(MAGENTA)Binary$(WHITE)\n"
-   cd $(ABS); $(CC) $(TEST) $(LIBDIRS) -o ./$@ $(LIBS)
-   @printf "[$(GREEN)Linked  $(WHITE)]   $(BRIGHT)$(MAIN)$(WHITE) - $(MAGENTA)Binary$(WHITE)\n"   
+	@printf "[$(CYAN)Linking $(WHITE)]   $(BRIGHT)$(MAIN)$(WHITE) - $(MAGENTA)Binary$(WHITE)\n"
+	cd $(ABS); $(CC) $(TEST) $(LIBDIRS) -o ./$@ $(LIBS)
+	@printf "[$(GREEN) Linked $(WHITE)]   $(BRIGHT)$(MAIN)$(WHITE) - $(MAGENTA)Binary$(WHITE)\n"   
 
 clean:
-   $(RM) *.core $(BUILD)/*.o *.d *.stackdump
+	$(RM) *.core $(BUILD)/*.o *.d *.stackdump
 
 #Disable command echoing, reenabled with make verbose=1
 ifndef verbose
