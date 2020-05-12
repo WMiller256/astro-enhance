@@ -6,7 +6,8 @@ BIN      = ~/bin
 BUILD      = ~/source/enhance/build
 RM       = /bin/rm -f
 MV         = /bin/mv -f
-CFLAGS   = -isystem /usr/local/include/opencv4/ -I /usr/lib/boost -Wno-deprecated-declarations -g -std=c++11 -rdynamic -pthread
+CFLAGS   = -isystem /usr/local/include/opencv4/ -I /usr/lib/boost -Wno-deprecated-declarations -g -std=c++11 -rdynamic \
+           -pthread -O3 -fopenmp
 CC       = /usr/bin/c++ $(CFLAGS)
 
            # OpenCV
@@ -41,6 +42,7 @@ RED     = \033[91m
 OBJS   = $(BUILD)/enhance.o               \
         $(BUILD)/processing.o             \
         $(BUILD)/compute.o                \
+        $(BUILD)/operators.o		      \
         $(BUILD)/iocustom.o
         
 STARTRAILS = $(BUILD)/startrails.o       \

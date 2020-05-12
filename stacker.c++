@@ -18,7 +18,6 @@
  
 #include "enhance.h"		// From personal custom image enhancement library
 
-namespace po = boost::program_options;
 cv::Mat3b key;
 std::string keyframe;
 std::vector<cv::Mat3b> aligned;
@@ -60,7 +59,7 @@ int main(int argn, char** argv) {
 		; 	
 	}
 	catch (...) {
-		std::cout << "Error in boost initialization" << std::endl;
+		std::cout << "Error in boost program options initialization" << std::endl;
 		exit(1);
 	}
 	
@@ -97,7 +96,7 @@ int main(int argn, char** argv) {
 	aligned.push_back(key);
 	
 	complete = 0;
-		std::thread threads[nthreads];
+	std::thread threads[nthreads];
 	if (block) {
 		for (int ii = 0; ii < nthreads - 1; ii ++) {
 			threads[ii] = std::thread(align, block * ii, block * (ii + 1));

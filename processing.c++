@@ -19,9 +19,9 @@ float good_match_percent;
 float separation_adjustment;
 
 cv::Mat3b coadd(const std::vector<cv::Mat3b> images) {
-	std::cout << "{max_features} - " << max_features << std::endl;
-	std::cout << "{good_match_percent} - " << good_match_percent << std::endl;
-	std::cout << "{separation_adjustment} - " << separation_adjustment << std::endl;
+//	std::cout << "{max_features} - " << max_features << std::endl;
+//	std::cout << "{good_match_percent} - " << good_match_percent << std::endl;
+//	std::cout << "{separation_adjustment} - " << separation_adjustment << std::endl;
    if (images.empty()) return cv::Mat3b();
 
 	// Create a 0 initialized image to use as accumulator
@@ -45,6 +45,34 @@ cv::Mat3b coadd(const std::vector<cv::Mat3b> images) {
 	m.convertTo(m, CV_8U, 1. / images.size());
 	std::cout << green+"done"+res+white+"." << std::endl;
 	return m;
+}
+
+std::vector<cv::Mat3b> scrub_hot_pixels(const std::vector<cv::Mat3b> images) {
+	cv::Mat3b m = images[0];
+	const cv::Vec3b zero(0, 0, 0);
+	int idx = 0;
+	for (auto image : images) {
+		if (image.rows != m.rows || image.cols != m.cols) {
+			std::cout << "Error, shape mismatch on image with shape " << image.rows << "x" << image.cols;
+			std::cout << " expected " << m.rows << "x" << m.cols << std::endl;
+			return images;
+		}
+#pragma omp parallel for schedule(dynamic)
+		for (int r = 0; r < m.rows; r ++) {
+			for (int c = 0; c < m.cols; c ++) {
+				if (m.at<cv::Vec3b>(r, c) != zero && m.at<cv::Vec3b>(r, c) != image.at<cv::Vec3b>(r, c)) {
+					m.at<cv::Vec3b>(r, c) = zero;
+				}
+			}
+			if (r == m.rows - 1) std::cout << std::flush;
+		}
+		print_percent(idx++, images.size());
+	}
+#pragma omp parallel for schedule(dynamic)
+	for (int i = 0; i < images.size(); i ++) {
+		images[i] -= m;
+	}
+	return images;
 }
 
 cv::Mat4b advanced_coadd(const std::vector<cv::Mat3b> images, double threshold) {
