@@ -25,7 +25,7 @@ int main(int argn, char** argv) {
 	try {
 		description.add_options()
 			("images,i", po::value<std::vector<std::string> >()->multitoken(), "The images to coadd,")
-			("scrub-hot-pixels, h", po::bool_switch()->default_value(false), "Scrub the hot pixels out of each image")
+			("scrub-hot-pixels,h", po::bool_switch()->default_value(false), "Scrub the hot pixels out of each image")
 		;
 	}
 	catch (...) {

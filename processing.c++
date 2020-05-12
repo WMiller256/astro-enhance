@@ -32,11 +32,11 @@ cv::Mat3b coadd(const std::vector<cv::Mat3b> images) {
 	// This will be allocated just the first time, since all the images have
 	// the same size.
 	cv::Mat temp;
+	int count = 0;  // For parallel percent printing
 	std::cout << "Converting the input images to CV_64FC3 ..." << std::endl;
 	for (int ii = 0; ii < images.size(); ii ++) {
-		print_percent(ii, images.size());
+		print_percent(count++, images.size());
 		images[ii].convertTo(temp, CV_64FC3);
-		
 		m += temp;
 	}
 
@@ -51,6 +51,7 @@ std::vector<cv::Mat3b> scrub_hot_pixels(const std::vector<cv::Mat3b> images) {
 	cv::Mat3b m = images[0];
 	const cv::Vec3b zero(0, 0, 0);
 	int idx = 0;
+	std::cout << "Scrubbing hot pixels..." << std::endl;
 	for (auto image : images) {
 		if (image.rows != m.rows || image.cols != m.cols) {
 			std::cout << "Error, shape mismatch on image with shape " << image.rows << "x" << image.cols;
@@ -68,6 +69,7 @@ std::vector<cv::Mat3b> scrub_hot_pixels(const std::vector<cv::Mat3b> images) {
 		}
 		print_percent(idx++, images.size());
 	}
+	cv::imwrite("./hot_pixels.tif", m);
 #pragma omp parallel for schedule(dynamic)
 	for (int i = 0; i < images.size(); i ++) {
 		images[i] -= m;

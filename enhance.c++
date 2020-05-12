@@ -1,21 +1,25 @@
-
 #include "enhance.h"
 
 std::vector<cv::Mat3b> read_images(std::vector<std::string> files) {	// Read the image files in the string vector {files}
+	std::mutex mtx;														// Create a mutex for pushing images onto {images}
 	if (files.empty()) return std::vector<cv::Mat3b>();					// To avoid segmentation fault in case of empty filelist, 
 																		// return default-constructed vector of [cv::Mat3b] objects
 	std::vector<cv::Mat3b> images;										// Initialize new vector of [cv::Mat3b] objects
 	std::cout << "Reading files..." << std::endl;
+	int count = 0;
+#pragma omp parallel for schedule(dynamic)
 	for (int ii = 0; ii < files.size(); ++ii) {							// Then for every file in the list
-		print_percent(ii, files.size());
 		cv::Mat3b image;												// create a new temporary [cv::Mat3b] object,
 		image = cv::imread(files[ii], cv::IMREAD_COLOR);				// read the {ii}th file from {files} into the temp 
+		mtx.lock();
 		if (!image.empty()) {											// object. If it is not empty
 			images.push_back(image);									// Push it onto the images vector
 		}
 		else {															// Or if file does not open, print a message and skip 
 			std::cout << "Could not open " << yellow << files[ii] << res << " - file may not exist." << std::endl;
 		}
+		print_percent(count++, files.size());
+		mtx.unlock();
 	}
 	return images;														// Then return the [cv::Mat3b] vector of images
 }

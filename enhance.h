@@ -6,6 +6,7 @@
 #include <iostream>
 #include <string>
 #include <atomic>
+#include <mutex>
 #include <thread>
 
 extern "C" {
@@ -35,9 +36,9 @@ extern bool draw;
 extern int max_features;
 extern float good_match_percent;
 extern float separation_adjustment;
-					
+	
 namespace po = boost::program_options;
-			  							
+
 std::vector<cv::Mat3b> read_images(std::vector<std::string>			// Read the images in the filelist {files}
 							   files);
 cv::Mat3b coadd(const std::vector<cv::Mat3b> images);					// Average all pixels from {images}
