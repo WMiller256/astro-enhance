@@ -17,6 +17,20 @@ int max_features;
 bool draw;
 float good_match_percent;
 float separation_adjustment;
+std::atomic<int> progress(0);
+
+void accumulate(const std::vector<cv::Mat> images, cv::Mat &m, const size_t &n) {
+	// Use a temp image to hold the conversion of each input image to CV_64FC3
+	// This will be allocated just the first time, since all the images have
+	// the same size.
+	for (auto im : images) {
+		print_percent(progress++, n);
+		im.convertTo(im, CV_64FC3);
+		m += im;
+	}
+}
+
+void f1(const std::vector<cv::Mat> m, size_t n) {};
 
 cv::Mat3b coadd(const std::vector<cv::Mat3b> images) {
 //	std::cout << "{max_features} - " << max_features << std::endl;
@@ -24,33 +38,42 @@ cv::Mat3b coadd(const std::vector<cv::Mat3b> images) {
 //	std::cout << "{separation_adjustment} - " << separation_adjustment << std::endl;
    if (images.empty()) return cv::Mat3b();
 
-	// Create a 0 initialized image to use as accumulator
-	cv::Mat m(images[0].rows, images[0].cols, CV_64FC3);
-	m.setTo(cv::Scalar(0,0,0,0));
-
-	// Use a temp image to hold the conversion of each input image to CV_64FC3
-	// This will be allocated just the first time, since all the images have
-	// the same size.
-	cv::Mat temp;
-	int count = 0;  // For parallel percent printing
-	std::cout << "Converting the input images to CV_64FC3 ..." << std::endl;
-	for (int ii = 0; ii < images.size(); ii ++) {
-		print_percent(count++, images.size());
-		images[ii].convertTo(temp, CV_64FC3);
-		m += temp;
+	// Create a 0 initialized image to use as accumulator for each thread
+	std::valarray<cv::Mat> m(cv::Mat(images[0].rows, images[0].cols, CV_64FC3), nthreads);
+	for (auto e : m) {
+		e.setTo(cv::Scalar(0, 0, 0, 0));
 	}
 
+	std::cout << "Converting the input images to CV_64FC3 ..." << std::endl;
+	// Create either {nthreads} threads and give each a subset of images to process
+	// or create one thread for each image. The latter only when {nthreads} < {images.size()}
+	const size_t size = images.size();
+	const int block = size > nthreads ? size / nthreads : 1;
+	const int nt = block > 0 ? nthreads : size;
+	std::vector<std::thread> threads(nt);
+	std::vector<cv::Mat> v(nt);
+	for (int ii = 0; ii < nt - 1; ii ++) {
+		threads[ii] = std::thread(accumulate, std::vector<cv::Mat>(images.begin() + ii * block, images.begin() + (ii + 1) * block), 
+								  std::ref(m[ii]), std::ref(size));
+	}
+	threads.back() = std::thread(accumulate, std::vector<cv::Mat>(images.begin() + block * (nt - 1), images.end()), 
+								 std::ref(m[nt-1]), std::ref(size));
+	for (auto t = threads.begin(); t != threads.end(); t++) (*t).join();
+	
 	std::cout << "Dividing... " << std::flush;
-	// Convert back to CV_8UC3 type, applying the division to get the actual mean
-	m.convertTo(m, CV_8U, 1. / images.size());
+	cv::Mat out;
+	for (auto e : m) out += e; 					   // Accumulate the arrays from the threads into a single array
+	out.convertTo(out, CV_8U, 1. / images.size()); // Convert back to CV_8UC3 type, applying the division to get the actual mean
 	std::cout << green+"done"+res+white+"." << std::endl;
-	return m;
+	
+	return out;
 }
 
 std::vector<cv::Mat3b> scrub_hot_pixels(const std::vector<cv::Mat3b> images) {
 	cv::Mat3b m = images[0];
 	const cv::Vec3b zero(0, 0, 0);
 	int idx = 0;
+	long hot = 0;
 	std::cout << "Scrubbing hot pixels..." << std::endl;
 	for (auto image : images) {
 		if (image.rows != m.rows || image.cols != m.cols) {
@@ -61,14 +84,23 @@ std::vector<cv::Mat3b> scrub_hot_pixels(const std::vector<cv::Mat3b> images) {
 #pragma omp parallel for schedule(dynamic)
 		for (int r = 0; r < m.rows; r ++) {
 			for (int c = 0; c < m.cols; c ++) {
-				if (m.at<cv::Vec3b>(r, c) != zero && m.at<cv::Vec3b>(r, c) != image.at<cv::Vec3b>(r, c)) {
+				if (m.at<cv::Vec3b>(r, c) != zero && (m.at<cv::Vec3b>(r, c) - image.at<cv::Vec3b>(r, c)) < 5) {
 					m.at<cv::Vec3b>(r, c) = zero;
 				}
 			}
-			if (r == m.rows - 1) std::cout << std::flush;
 		}
 		print_percent(idx++, images.size());
 	}
+#pragma omp parallel for schedule(dynamic)
+	for (int r = 0; r < m.rows; r ++) {
+		for (int c = 0; c < m.cols; c++) {
+			if (m.at<cv::Vec3b>(r, c) != zero) {
+				#pragma omp critical
+				hot++;
+			}
+		}
+	}
+	std::cout << "Found " << hot << " hot pixels." << std::endl;
 	cv::imwrite("./hot_pixels.tif", m);
 #pragma omp parallel for schedule(dynamic)
 	for (int i = 0; i < images.size(); i ++) {

@@ -13,5 +13,8 @@
 #include "enhance.h"
 
 bool operator!=(const cv::Vec3b &l, const cv::Vec3b &r);
+bool operator<(const cv::Vec3b &v, const int &i);
+bool operator<(const int &i, const cv::Vec3b &v);
+std::ostream& operator<<(std::ostream &os, const cv::Vec3b &v);
 
 #endif // OPERATORS_H

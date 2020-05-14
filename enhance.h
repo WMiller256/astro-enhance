@@ -8,6 +8,8 @@
 #include <atomic>
 #include <mutex>
 #include <thread>
+#include <valarray>
+#include <future>
 
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -36,6 +38,8 @@ extern bool draw;
 extern int max_features;
 extern float good_match_percent;
 extern float separation_adjustment;
+
+const int nthreads = std::thread::hardware_concurrency();
 	
 namespace po = boost::program_options;
 

@@ -9,6 +9,7 @@
 
 #include "enhance.h"
 
+void accumulate(const std::vector<cv::Mat> images, cv::Mat &m, const size_t &n);
 cv::Mat3b coadd(const std::vector<cv::Mat3b> images);
 std::vector<cv::Mat3b> scrub_hot_pixels(const std::vector<cv::Mat3b> images);
 cv::Mat4b advanced_coadd(const std::vector<cv::Mat3b> images, double threshold);
