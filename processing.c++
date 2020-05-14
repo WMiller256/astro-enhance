@@ -23,14 +23,13 @@ void accumulate(const std::vector<cv::Mat> images, cv::Mat &m, const size_t &n) 
 	// Use a temp image to hold the conversion of each input image to CV_64FC3
 	// This will be allocated just the first time, since all the images have
 	// the same size.
+	cv::Mat temp;
 	for (auto im : images) {
-		im.convertTo(im, CV_64FC3);
-		m += im;
+		im.convertTo(temp, CV_64FC3);
+		m += temp;
 		print_percent(progress++, n);
 	}
 }
-
-void f1(const std::vector<cv::Mat> m, size_t n) {};
 
 cv::Mat3b coadd(const std::vector<cv::Mat3b> images) {
 //	std::cout << "{max_features} - " << max_features << std::endl;
@@ -52,6 +51,7 @@ cv::Mat3b coadd(const std::vector<cv::Mat3b> images) {
 	const int nt = block > 0 ? nthreads : size;
 	std::vector<std::thread> threads(nt);
 	std::vector<cv::Mat> v(nt);
+	print_percent(progress, size);
 	for (int ii = 0; ii < nt - 1; ii ++) {
 		threads[ii] = std::thread(accumulate, std::vector<cv::Mat>(images.begin() + ii * block, images.begin() + (ii + 1) * block), 
 								  std::ref(m[ii]), std::ref(size));
@@ -61,7 +61,8 @@ cv::Mat3b coadd(const std::vector<cv::Mat3b> images) {
 	for (auto &t : threads) t.join();
 	
 	std::cout << "Dividing... " << std::flush;
-	cv::Mat out;
+	cv::Mat out(m[0].rows, m[0].cols, CV_64FC3);
+	out.setTo(cv::Scalar(0, 0, 0, 0));
 	for (auto e : m) out += e; 					   // Accumulate the arrays from the threads into a single array
 	out.convertTo(out, CV_8U, 1. / images.size()); // Convert back to CV_8UC3 type, applying the division to get the actual mean
 	std::cout << green+"done"+res+white+"." << std::endl;

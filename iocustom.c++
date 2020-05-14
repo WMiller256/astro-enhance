@@ -24,24 +24,16 @@ static std::vector<int> b = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 										0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 void print_percent(int current, int total) {
-	if (total == 1) return;
 	float percent = ((float)current/(float)(total - 1))*100.0;
-	if (current > total) return;
 	int idx = (int)percent - 1 >= 0 ? (int)percent : 0;
+	if (total == 1 || current > total || percent > 100) return;
 
-	if (percent > 100) return;
-
-	if (percent != 0) {
-		for (int ii = 0; ii < 4; ii ++) {
-			std::cout << char(8);
-		}
-	}
-	std::cout << "\033[38;2;"+std::to_string(r[idx])+";"+std::to_string(g[idx])+";"+std::to_string(b[idx])+"m";
-	std::cout <<  std::setw(3) << std::setfill('0') << (int)percent << '%' << std::flush;
+	std::string p = std::to_string(int(percent));
+	std::cout << backspace+"\033[38;2;"+std::to_string(r[idx])+";"+std::to_string(g[idx])+";"+std::to_string(b[idx])+"m"+
+	             std::string(3 - p.length(), '0')+p+"%"+res << std::flush;
 	if (percent == 100) {
-		std::cout << std::endl;
+		std::cout << res+"\n" << std::flush;
 	}
-	std::cout << res << std::flush;
 }
 
 std::string datetime() {
