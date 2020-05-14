@@ -24,9 +24,9 @@ void accumulate(const std::vector<cv::Mat> images, cv::Mat &m, const size_t &n) 
 	// This will be allocated just the first time, since all the images have
 	// the same size.
 	for (auto im : images) {
-		print_percent(progress++, n);
 		im.convertTo(im, CV_64FC3);
 		m += im;
+		print_percent(progress++, n);
 	}
 }
 
@@ -58,7 +58,7 @@ cv::Mat3b coadd(const std::vector<cv::Mat3b> images) {
 	}
 	threads.back() = std::thread(accumulate, std::vector<cv::Mat>(images.begin() + block * (nt - 1), images.end()), 
 								 std::ref(m[nt-1]), std::ref(size));
-	for (auto t = threads.begin(); t != threads.end(); t++) (*t).join();
+	for (auto &t : threads) t.join();
 	
 	std::cout << "Dividing... " << std::flush;
 	cv::Mat out;
@@ -75,7 +75,7 @@ std::vector<cv::Mat3b> scrub_hot_pixels(const std::vector<cv::Mat3b> images) {
 	int idx = 0;
 	long hot = 0;
 	std::cout << "Scrubbing hot pixels..." << std::endl;
-	for (auto image : images) {
+	for (auto image : std::vector<cv::Mat3b>(images.begin() + 1, images.end())) {
 		if (image.rows != m.rows || image.cols != m.cols) {
 			std::cout << "Error, shape mismatch on image with shape " << image.rows << "x" << image.cols;
 			std::cout << " expected " << m.rows << "x" << m.cols << std::endl;
@@ -89,14 +89,14 @@ std::vector<cv::Mat3b> scrub_hot_pixels(const std::vector<cv::Mat3b> images) {
 				}
 			}
 		}
-		print_percent(idx++, images.size());
+		print_percent(idx++, images.size() - 1);
 	}
 #pragma omp parallel for schedule(dynamic)
 	for (int r = 0; r < m.rows; r ++) {
 		for (int c = 0; c < m.cols; c++) {
 			if (m.at<cv::Vec3b>(r, c) != zero) {
 				#pragma omp critical
-				hot++;
+					hot++;
 			}
 		}
 	}
@@ -132,15 +132,17 @@ cv::Mat4b advanced_coadd(const std::vector<cv::Mat3b> images, double threshold) 
 	uchar max = find_max(images);
 	std::cout << "Maximum is " << (int)max << std::endl;
 	std::cout << "Performing selective coadding ..." << std::endl;
-	for (int ii = 0; ii < images.size(); ii++) {
+	progress = 0;
+	for (auto image : images) {
 		long transparent = 0;
-		print_percent(ii, images.size());
-		cv::Mat current(images[ii].rows, images[ii].cols, CV_32FC4);
-		cv::cvtColor(images[ii], current, cv::COLOR_BGR2BGRA);
+		print_percent(progress++, images.size());
+		cv::Mat current(image.rows, image.cols, CV_32FC4);
+		cv::cvtColor(image, current, cv::COLOR_BGR2BGRA);
 		std::cout << type2str(current.type()) << std::endl;
-		for (int jj = 0; jj < current.rows; jj ++) {
-			for (int kk = 0; kk < current.cols; kk ++) {
-				cv::Vec4b& pixel = current.at<cv::Vec4b>(jj, kk);
+#pragma omp parallel for schedule(dynamic)
+		for (int r = 0; r < current.rows; r ++) {
+			for (int c = 0; c < current.cols; c ++) {
+				cv::Vec4b& pixel = current.at<cv::Vec4b>(r, c);
 				if (!brighter_than(pixel, max*threshold)) {
 					pixel[3] = 0.0;
 					transparent ++;
@@ -160,20 +162,18 @@ cv::Mat4b advanced_coadd(const std::vector<cv::Mat3b> images, double threshold) 
 	for (int ii = 0; ii < modified.size(); ii ++) {
 		modified[ii].convertTo(modified[ii], CV_32FC4);
 		std::cout << type2str(modified[ii].type()) << std::endl;
-		for (int jj = 0; jj < m.rows; jj ++) {
-			for (int kk = 0; kk < m.cols; kk ++) {
-				cv::Vec4b pixel = modified[ii].at<cv::Vec4b>(jj, kk);
-				cv::Vec4b& mpixel = m.at<cv::Vec4b>(jj, kk);
+		for (int r = 0; r < m.rows; r ++) {
+			for (int c = 0; c < m.cols; c ++) {
+				cv::Vec4b pixel = modified[ii].at<cv::Vec4b>(r, c);
+				cv::Vec4b& mpixel = m.at<cv::Vec4b>(r, c);
 				if (pixel[3] != 0.0) {
-					mpixel[0] += pixel[0];
-					mpixel[1] += pixel[1];
-					mpixel[2] += pixel[2];
-					mask[jj][kk] += 1;
+					mpixel += pixel;
+					mask[r][c] += 1;
 				}				
-/*				if (jj == m.rows/2 && kk == m.cols/2) {
+/*				if (r == m.rows/2 && c == m.cols/2) {
 					std::cout << "BGRA mpixel: (" << (float)mpixel[0] << ", " << (float)mpixel[1] << ", " << (float)mpixel[2] << ", " << (float)mpixel[3] << ")" << std::endl;
 					std::cout << "BGRA pixel:  (" << (float)pixel[0] << ", " << (float)pixel[1] << ", " << (float)pixel[2] << ", " << (float)pixel[3] << ")" << std::endl;
-					mpixel = m.at<cv::Vec4b>(jj, kk);
+					mpixel = m.at<cv::Vec4b>(r, c);
 					std::cout << "BGRA mpixel: (" << (float)mpixel[0] << ", " << (float)mpixel[1] << ", " << (float)mpixel[2] << ", " << (float)mpixel[3] << ")\n" << std::endl;
 				}
 */			}
@@ -268,8 +268,8 @@ float find_separation(cv::DMatch m, std::vector<cv::KeyPoint> kp1, std::vector<c
 
 std::vector<float> find_separations(std::vector<cv::DMatch> matches, std::vector<cv::KeyPoint> kp1, std::vector<cv::KeyPoint> kp2) {
 	std::vector<float> separations;
-	for (int ii = 0; ii < matches.size(); ii ++) {
-		separations.push_back(find_separation(matches[ii], kp1, kp2));
+	for (const auto &match : matches) {
+		separations.push_back(find_separation(match, kp1, kp2));
 	}
 	return separations;
 }
