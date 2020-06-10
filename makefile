@@ -1,11 +1,11 @@
 #Name of program
 MAIN     = $@
 
-ABS      = ~/source/enhance
+ABS      = ./
 BIN      = ~/bin
-BUILD      = ~/source/enhance/build
+BUILD    = ./build
 RM       = /bin/rm -f
-MV         = /bin/mv -f
+MV       = /bin/mv -f
 CFLAGS   = -isystem /usr/local/include/opencv4/ -I /usr/lib/boost -Wno-deprecated-declarations -g -std=c++11 -rdynamic \
            -pthread -O3 -fopenmp
 CC       = /usr/bin/c++ $(CFLAGS)
