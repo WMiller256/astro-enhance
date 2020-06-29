@@ -1,5 +1,15 @@
 #include "enhance.h"
 
+cv::Mat3b read_image(std::string file) {			// Read the image file specified by {file}
+	if (!fs::exists(fs::path(file))) {				// If the file does not exist simply exit with uninitialized return
+		std::cout << "Error - file "+file+" does not exist or other file error." << std::endl;
+		return cv::Mat3b();	
+	}
+
+	cv::Mat3b image = cv::imread(file, cv::IMREAD_COLOR);
+	return image;
+}
+
 std::vector<cv::Mat3b> read_images(std::vector<std::string> files) {	// Read the image files in the string vector {files}
 	std::mutex mtx;														// Create a mutex for pushing images onto {images}
 	if (files.empty()) return std::vector<cv::Mat3b>();					// To avoid segmentation fault in case of empty filelist, 
@@ -80,6 +90,20 @@ int brightness(const cv::Vec3b& input) {					    // Find and return the brightne
 }
 
 bool brighter_than(cv::Vec4b pixel, double threshold) { return ((pixel[0] + pixel[1] + pixel[2]) / 3 > threshold); }
+
+uchar find_max(cv::Mat3b image) {
+	uchar max_intensity = 0;
+	for (int ii = 0; ii < images[img].rows; ii ++) {		// Loop through each pixel and look for the brightest value
+		for (int jj = 0; jj < images[img].cols; jj ++) {
+			int value = brightness(images[img].at<cv::Vec3b>(ii, jj));
+															// Pull the brightness value for the current pixel
+			if (value > max_intensity) {					// And if it is brighter than the previous max
+				max_intensity = value;						// Replace the previous max with the new brightness value
+			}
+		}
+	}
+	return max_intensity;
+}
 
 uchar find_max(std::vector<cv::Mat3b> images) {
 	if (images.empty()) return 0;

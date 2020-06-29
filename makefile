@@ -6,7 +6,7 @@ BIN      = ~/bin
 BUILD    = ./build
 RM       = /bin/rm -f
 MV       = /bin/mv -f
-CFLAGS   = -isystem /usr/local/include/opencv4/ -I /usr/lib/boost -Wno-deprecated-declarations -g -std=c++11 -rdynamic \
+CFLAGS   = -isystem /usr/local/include/opencv4/ -I /usr/lib/boost -Wno-deprecated-declarations -g -std=c++17 -rdynamic \
            -pthread -O3 -fopenmp
 CC       = /usr/bin/c++ $(CFLAGS)
 
@@ -23,7 +23,7 @@ LIBS =     -lopencv_gapi -lopencv_stitching -lopencv_aruco -lopencv_bgsegm -lope
            -lopencv_objdetect -lopencv_calib3d -lopencv_features2d -lopencv_flann -lopencv_photo   \
            -lopencv_imgproc -lopencv_core                                                            \
            -lavutil -lavcodec -lavformat -lavdevice -lavfilter -lswscale                            \
-           -lboost_program_options -lncurses
+           -lboost_program_options -lncurses -lstdc++fs
                     
 LFLAGS   = -Wl,-rpath,/usr/local/lib
 LIBDIRS   = $(LFLAGS) -L/usr/local/lib/ -L/usr/lib/boost
@@ -48,16 +48,19 @@ OBJS   = $(BUILD)/enhance.o               \
 STARTRAILS = $(BUILD)/startrails.o       \
              $(OBJS)
 
-TEST         = $(BUILD)/test.o             \
+TEST       = $(BUILD)/test.o             \
              $(OBJS)
              
-STACKER      = $(BUILD)/stacker.o           \
+STACKER    = $(BUILD)/stacker.o          \
              $(OBJS)
 
-COADD        = $(BUILD)/coadd.o              \
+COADD      = $(BUILD)/coadd.o            \
              $(OBJS)
 
-ADV_COADD  = $(BUILD)/advanced_coadd.o    \
+SUBTRACT   = $(BUILD)/subtract.o         \
+             $(OBJS)
+
+ADV_COADD  = $(BUILD)/advanced_coadd.o   \
              $(OBJS)
 
 #Builds
@@ -85,6 +88,11 @@ advanced_coadd: $(ADV_COADD)
 coadd: $(COADD)
 	@printf "[$(CYAN)Linking $(WHITE)]   $(BRIGHT)$(MAIN)$(WHITE) - $(MAGENTA)Binary$(WHITE)\n"
 	cd $(ABS); $(CC) $(COADD) $(LIBDIRS) -o $(BIN)/$@ $(LIBS)
+	@printf "[$(GREEN) Linked $(WHITE)]   $(BRIGHT)$(MAIN)$(WHITE) - $(MAGENTA)Binary$(WHITE)\n"
+
+subtract: $(SUBTRACT)
+	@printf "[$(CYAN)Linking $(WHITE)]   $(BRIGHT)$(MAIN)$(WHITE) - $(MAGENTA)Binary$(WHITE)\n"
+	cd $(ABS); $(CC) $(SUBTRACT) $(LIBDIRS) -o $(BIN)/$@ $(LIBS)
 	@printf "[$(GREEN) Linked $(WHITE)]   $(BRIGHT)$(MAIN)$(WHITE) - $(MAGENTA)Binary$(WHITE)\n"
 
 stacker: $(STACKER)

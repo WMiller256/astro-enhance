@@ -30,7 +30,7 @@ int main(int argn, char** argv) {
 	std::cout << res;
 	std::string ofile;
 	std::string date = datetime();
-	int nthreads = std::thread::hardware_concurrency();
+	nthreads = max_threads;
 	bool advanced;
 	double threshold = 0;
 
@@ -67,8 +67,8 @@ int main(int argn, char** argv) {
 	po::store(po::command_line_parser(argn, argv).options(description).run(), vm);
 	po::notify(vm);
 	
-	if (nthreads > std::thread::hardware_concurrency()) {
-		nthreads = std::thread::hardware_concurrency();
+	if (nthreads > max_threads) {
+		nthreads = max_threads;
 	}
 
 	advanced = vm["advanced"].as<bool>();

@@ -23,7 +23,7 @@ void accumulate(const std::vector<cv::Mat> images, cv::Mat &m, const size_t &n) 
 	// Use a temp image to hold the conversion of each input image to CV_64FC3
 	// This will be allocated just the first time, since all the images have
 	// the same size.
-	cv::Mat temp;
+	cv::Mat temp(m.rows, m.cols, CV_64FC3);
 	for (auto im : images) {
 		im.convertTo(temp, CV_64FC3);
 		m += temp;
@@ -31,15 +31,32 @@ void accumulate(const std::vector<cv::Mat> images, cv::Mat &m, const size_t &n) 
 	}
 }
 
+void subtract(const std::vector<std::string> files, const std::string &_darkframe, const double &factor) {
+	size_t idx = 0;
+	fs::path path;
+	std::vector<cv::Mat3b> images = read_images(files);
+	cv::Mat3b darkframe = read_image(_darkframe);
+	cv::Mat out;
+	for (const auto &im : images) {
+		path = fs::path(files[idx++]);
+		out = im - darkframe * factor;
+		cv::imwrite(path.replace_filename(path.stem().string()+"_sub"+path.extension().string()), out);
+		print_percent(idx, files.size());
+	}
+}
+
 cv::Mat3b coadd(const std::vector<cv::Mat3b> images) {
 //	std::cout << "{max_features} - " << max_features << std::endl;
 //	std::cout << "{good_match_percent} - " << good_match_percent << std::endl;
 //	std::cout << "{separation_adjustment} - " << separation_adjustment << std::endl;
-   if (images.empty()) return cv::Mat3b();
+    if (images.empty()) return cv::Mat3b();
+
+	// Protect against hardware concurrency larger than number of images
+	const int nthreads = max_threads > images.size() ? images.size() : max_threads;
 
 	// Create a 0 initialized image to use as accumulator for each thread
 	std::valarray<cv::Mat> m(cv::Mat(images[0].rows, images[0].cols, CV_64FC3), nthreads);
-	for (auto e : m) {
+	for (auto &e : m) {
 		e.setTo(cv::Scalar(0, 0, 0, 0));
 	}
 
@@ -56,15 +73,19 @@ cv::Mat3b coadd(const std::vector<cv::Mat3b> images) {
 		threads[ii] = std::thread(accumulate, std::vector<cv::Mat>(images.begin() + ii * block, images.begin() + (ii + 1) * block), 
 								  std::ref(m[ii]), std::ref(size));
 	}
-	threads.back() = std::thread(accumulate, std::vector<cv::Mat>(images.begin() + block * (nt - 1), images.end()), 
+	threads.back() = std::thread(accumulate, std::vector<cv::Mat>(images.begin() + block * (nt - 1), images.end()),
 								 std::ref(m[nt-1]), std::ref(size));
 	for (auto &t : threads) t.join();
 	
 	std::cout << "Dividing... " << std::flush;
 	cv::Mat out(m[0].rows, m[0].cols, CV_64FC3);
 	out.setTo(cv::Scalar(0, 0, 0, 0));
+
+	// ISSUE std::ref not behaving as expected when calling [accumulate].
+	// Workaround of m[0].convertTo(...) instead of out.convertTo(...) is
+	// inefficient (discards threading advantages).
 	for (auto e : m) out += e; 					   // Accumulate the arrays from the threads into a single array
-	out.convertTo(out, CV_8U, 1. / images.size()); // Convert back to CV_8UC3 type, applying the division to get the actual mean
+	m[0].convertTo(out, CV_8U, 1. / images.size()); // Convert back to CV_8UC3 type, applying the division to get the actual mean
 	std::cout << green+"done"+res+white+"." << std::endl;
 	
 	return out;
@@ -195,6 +216,16 @@ cv::Mat4b advanced_coadd(const std::vector<cv::Mat3b> images, double threshold) 
 	m.convertTo(output, CV_8U, 1. / modified.size());
 	std::cout << green+"done."+res+white << std::endl;
 	return output;
+}
+
+void align_stars(cv::Mat &anc, cv::Mat &com, cv::Mat &result, bool translation, bool rotation, bool perspective) {
+	// Do a downhill minimization by repeatedly sampling the translation-rotation-perspective 
+	// parameter space and iteratively refining.
+	// {anc} - anchor image
+	// {com} - comparison image
+	// {result} - result after alignment
+	cv::Mat3b anc_stars = find_stars(anc, find_max(anc));
+	cv::Mat3b com_stars = find_stars(com, find_max(com));
 }
 
 void align_images(cv::Mat &im1, cv::Mat &im2, cv::Mat &im1Reg) {

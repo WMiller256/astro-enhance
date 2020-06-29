@@ -1,16 +1,18 @@
 #ifndef ENHANCE_H
 #define ENHANCE_H
 
-#include <colors.h>
+// std
+#include <atomic>
+#include <experimental/filesystem>
+#include <future>
 #include <iomanip>
 #include <iostream>
-#include <string>
-#include <atomic>
 #include <mutex>
+#include <string>
 #include <thread>
 #include <valarray>
-#include <future>
 
+// Opencv
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavdevice/avdevice.h>
@@ -27,8 +29,11 @@ extern "C" {
 #include <opencv2/xfeatures2d.hpp>
 #include <opencv2/features2d.hpp> 
 
+// Boost
 #include <boost/program_options.hpp>
 
+// enhance
+#include "colors.h"
 #include "iocustom.h"
 #include "processing.h"
 #include "compute.h"
@@ -39,25 +44,30 @@ extern int max_features;
 extern float good_match_percent;
 extern float separation_adjustment;
 
-const int nthreads = std::thread::hardware_concurrency();
-	
+const int max_threads = std::thread::hardware_concurrency();
+    
 namespace po = boost::program_options;
+namespace fs = std::experimental::filesystem;
 
-std::vector<cv::Mat3b> read_images(std::vector<std::string>			// Read the images in the filelist {files}
-							   files);
-cv::Mat3b coadd(const std::vector<cv::Mat3b> images);					// Average all pixels from {images}
-cv::Mat3b advanced_coadd(const std::vector<cv::Mat3b> images,		// Selective coadd ignoring pixels with brightness 
-								 float threshold = 0.3);						// below {max_intensity}*{threshold}
-cv::Mat3b star_trail(const std::vector<cv::Mat3b> images);			// Find star trails from {images} and return a composite with
-																						// star trails stacked on coadded image
-cv::Mat3b find_stars(cv::Mat3b image, uchar max_intensisty,			// Finds stars in {image} based on relative brightness, 
-							int nn = 0, float star_threshold = 0.995);	// returning a [Mat3b] mask of stars 
-uchar find_max(std::vector<cv::Mat3b> images);							// Find the brightest pixel in {images}
-int brightness(const cv::Vec3b& input);									// Find the brightness value of the given 3 channel pixel
-bool brighter_than(cv::Vec4b pixel, double threshold);				// Evaluates if a given pixel is above a brightness threshold
+cv::Mat3b read_image(std::string file);                                // Read the single image specified by {file}
+std::vector<cv::Mat3b> read_images(std::vector<std::string>            // Read the images in the filelist {files}
+                               files);
+void subtract(const std::vector<std::string> files, 
+              const std::string &_darkframe, const double &factor = 1.0);
+cv::Mat3b coadd(const std::vector<cv::Mat3b> images);                  // Average all pixels from {images}
+cv::Mat3b advanced_coadd(const std::vector<cv::Mat3b> images,          // Selective coadd ignoring pixels with brightness 
+                                 float threshold = 0.3);               // below {max_intensity}*{threshold}
+cv::Mat3b star_trail(const std::vector<cv::Mat3b> images);             // Find star trails from {images} and return a composite with
+                                                                       // star trails stacked on coadded image
+cv::Mat3b find_stars(cv::Mat3b image, uchar max_intensisty,            // Finds stars in {image} based on relative brightness, 
+                            int nn = 0, float star_threshold = 0.995); // returning a [Mat3b] mask of stars 
+uchar find_max(cv::Mat3b image);                                       // Find the brightest pixel in {image}
+uchar find_max(std::vector<cv::Mat3b> images);                         // Find the brightest pixel in {images}
+int brightness(const cv::Vec3b& input);                                // Find the brightness value of the given 3 channel pixel
+bool brighter_than(cv::Vec4b pixel, double threshold);                 // Evaluates if a given pixel is above a brightness threshold
 
-std::vector<cv::Mat3b> extract_frames(std::vector<std::string>		// Extract the frames from a video file into frames in a 
-								  files);											// vector of [Mat3b] objects
-std::vector<cv::Mat3b> read_video(std::vector<std::string>			// Extract the frames from a video using FFMPEG library
-								  videos);						
+std::vector<cv::Mat3b> extract_frames(std::vector<std::string>         // Extract the frames from a video file into frames in a 
+                                  files);                              // vector of [Mat3b] objects
+std::vector<cv::Mat3b> read_video(std::vector<std::string>             // Extract the frames from a video using FFMPEG library
+                                  videos);                        
 #endif

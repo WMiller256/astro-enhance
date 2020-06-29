@@ -10,7 +10,9 @@
  * require alignment and the advanced_coadd if there is 
  * foreground to be ignored
  *
- * Usage: coadd <files>
+ * Usage: 
+ * 
+ *    coadd [-i|--images] <files> [-h|--scrub-hot-pixels]
  *
  */
  
@@ -38,13 +40,12 @@ int main(int argn, char** argv) {
 	po::notify(vm);
 
 	pixel_scrubbing = vm["scrub-hot-pixels"].as<bool>();
-	if (vm.count("images")) {
-		files = vm["images"].as<std::vector<std::string> >();
-	}
+	if (vm.count("images")) files = vm["images"].as<std::vector<std::string> >();
 	else {
 		std::cout << "Error - must specify images to coadd" << std::endl;
 		exit(2);
 	}
+
 	
 	std::vector<cv::Mat3b> images = read_images(files);
 	if (pixel_scrubbing) images = scrub_hot_pixels(images);
