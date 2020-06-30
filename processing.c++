@@ -220,18 +220,38 @@ cv::Mat4b advanced_coadd(const std::vector<cv::Mat3b> images, double threshold) 
 
 void align_stars(cv::Mat &anc, cv::Mat &com, cv::Mat &result, bool translation, bool rotation, bool perspective) {
 	// Do a downhill minimization by repeatedly sampling the translation-rotation-perspective 
-	// parameter space and iteratively refining.
+	// parameter space and iteratively refining. This method works best for images with dim or 
+	// no foreground and little star trailing. For images that do not satisfy this, [align_images]
+	// should be used instead.
 	// {anc} - anchor image
 	// {com} - comparison image
 	// {result} - result after alignment
-	cv::Mat3b anc_stars = find_stars(anc, find_max(anc));
-	cv::Mat3b com_stars = find_stars(com, find_max(com));
+
+	// Extract a mask of only the brightest stars (within 0.5% of max brightness)
+	cv::Mat3b anc_stars = find_stars(anc, find_max({anc}), 2);
+	cv::Mat3b com_stars = find_stars(com, find_max({com}), 2);
+
+	// Convert star masks into vector of positions
+	std::vector<std::pair<double, double>> anc_pos = star_positions(anc_stars, 100);
+	std::vector<std::pair<double, double>> com_pos = star_positions(com_stars, 100);
+
+	const size_t n = 10;
+	double min = diff(anc_pos, com_pos);
+	std::cout << min << std::endl;
+	size_t where = 0;
+	std::pair<std::pair<double, double>, std::pair<double, double>> tran_lim = std::make_pair(std::make_pair(-com.cols, anc.cols), 
+																							  std::make_pair(-com.rows, anc.rows));
+	std::pair<double, double> rot_lim = std::make_pair(-180, 180);	
+	std::pair<double, double> pers_lim = std::make_pair(-90, 90);
+	for (int ii = 0; ii < 4; ii ++) {		
+	}
 }
 
 void align_images(cv::Mat &im1, cv::Mat &im2, cv::Mat &im1Reg) {
-	
-	// Convert images to grayscale
+	// Performs feature based alignment of {im1} to {im2}.
 	cv::Mat im1Gray, im2Gray, h;
+
+	// Convert images to grayscale
 	cvtColor(im1, im1Gray, cv::COLOR_BGR2GRAY);
 	cvtColor(im2, im2Gray, cv::COLOR_BGR2GRAY);
 	

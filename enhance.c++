@@ -63,7 +63,7 @@ cv::Mat3b star_trail(const std::vector<cv::Mat3b> images) {
 cv::Mat3b find_stars(cv::Mat3b image, uchar max_intensity, 
 							int nn, float star_threshold) {				// Find stars in the given image and return a mask of stars
 	cv::Mat3b out(image.rows, image.cols, CV_64FC3);					// Initialize output object of type CV_64FC3
-	out.setTo(cv::Scalar(0,0,0,0));										// Set every channel to zeros
+	out.setTo(cv::Scalar(0, 0, 0, 0));									// Set every channel to zeros
 	for (int ii = 0; ii < out.rows; ii++) {								// Then loop through every pixel
 		for (int jj = 0; jj < out.cols; jj++) {	
 			cv::Vec3b input = image.at<cv::Vec3b>(ii, jj);						// Find the pixel from the input image and 
@@ -85,30 +85,43 @@ cv::Mat3b find_stars(cv::Mat3b image, uchar max_intensity,
 	return out;															// Return a mask with stars isolated
 }
 
+std::vector<std::pair<double, double>> star_positions(const cv::Mat3b &starmask, const size_t &n) {
+	std::vector<std::pair<double, double>> positions;
+	std::vector<std::vector<cv::Point>> contours;
+
+	// cv::findContours only supports CV_8U images when using cv::RETR_EXTERNAL
+	cv::Mat _starmask;
+	cvtColor(starmask, _starmask, cv::COLOR_BGR2GRAY);
+
+	// Retrieve the moments of the contours of the star mask. This should produce 
+	// a reasonable set of the actual positions of the stars, assuming negligible trailing
+	std::vector<cv::Vec4i> heirarchy;
+	cv::findContours(_starmask, contours, heirarchy, cv::RETR_TREE, cv::CHAIN_APPROX_NONE, cv::Point(0, 0));
+
+	// Sort by size (might be better to use brightness or do some random sampling but this will suffice for now)
+	std::sort(contours.begin(), contours.end(), [](auto &l, auto &r) { return cv::contourArea(l) < cv::contourArea(r); });
+
+	// Extract the centroids positions of the contours
+	for (const auto &contour : contours) {
+		cv::Moments m = cv::moments(contour, false);
+		// If m00 == 0 the contour is illformed
+		if (m.m00) positions.push_back(std::make_pair(m.m10 / m.m00, m.m01 / m.m00));
+	}
+	// Erase all but the first {n} positions
+	positions.erase(positions.begin() + n, positions.end());
+	return positions;
+}
+
 int brightness(const cv::Vec3b& input) {					    // Find and return the brightness [0-255] of the three 
 	return (input.val[0] + input.val[1] + input.val[2])/3;	    // channel pixel {input}
 }
 
 bool brighter_than(cv::Vec4b pixel, double threshold) { return ((pixel[0] + pixel[1] + pixel[2]) / 3 > threshold); }
 
-uchar find_max(cv::Mat3b image) {
-	uchar max_intensity = 0;
-	for (int ii = 0; ii < images[img].rows; ii ++) {		// Loop through each pixel and look for the brightest value
-		for (int jj = 0; jj < images[img].cols; jj ++) {
-			int value = brightness(images[img].at<cv::Vec3b>(ii, jj));
-															// Pull the brightness value for the current pixel
-			if (value > max_intensity) {					// And if it is brighter than the previous max
-				max_intensity = value;						// Replace the previous max with the new brightness value
-			}
-		}
-	}
-	return max_intensity;
-}
-
 uchar find_max(std::vector<cv::Mat3b> images) {
 	if (images.empty()) return 0;
 
-	std::cout << "Finding maximum intensity..." << std::endl;
+	if (images.size() > 1) std::cout << "Finding maximum intensity..." << std::endl;
 	uchar max_intensity = 0;
 	for (int img = 0; img < images.size(); ++img) {				// Loop through every image in the vector {images}
 		print_percent(img, images.size());						// print the percent complete
