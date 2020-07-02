@@ -86,22 +86,116 @@ cv::Mat3b find_stars(const cv::Mat3b &image, uchar max_intensity,
 	return out;															// Return a mask with stars isolated
 }
 
-cv::Mat3b gaussian_find(const cv::Mat3b &_image) {
-	// First convert image to grayscale
-	cv::Mat image(_image.rows, _image.cols, CV_8U);
+cv::Mat gaussian_find(const cv::Mat3b &_image, long w, size_t z) {
+/* 
+   Extract a binary mask of stars from an image by using localized analysis of 
+   mean and standard deviation to decide if a pixel is likely part of a star or not
+
+ 	{_image} - The input image
+ 	{w}		 - The bandwidth so to speak, equal to the maximum possible 
+			   value for half the sidelength of the ROI. NOTE - {w} is `long`
+			   instead of `size_t` because it eliminates the need for signed-cast
+			   when comparing r - w > 0 and c - w > 0
+	{z} 	 - The z-score threshold to use for filtering. Defaults to 2
+*/
+	// First convert image to grayscale and set up binary output
+	cv::Mat image(_image.rows, _image.cols, CV_8UC1);
 	cvtColor(_image, image, cv::COLOR_BGR2GRAY);
-
-	// Retrieve the minimum and total
-	double min;
-	cv::minMaxLoc(image, &min);
-
-	// Iterating pointer is much faster than using [.at<>()]
-	double tot(0);
-	uchar* pixel = image.ptr(0, 0);
-	for (size_t rc = 0; rc < image.rows * image.cols; rc++, pixel++) tot += *pixel;
+	cv::Mat out = cv::Mat::zeros(_image.rows, _image.cols, CV_8UC1);
 	
-	std::cout << tot << std::endl;
-	return cv::Mat3b();
+	// Iterating pointers is much faster than using [.at<>()]
+	uchar* pixel = image.ptr(0, 0);
+	uchar* _out = out.ptr(0, 0);
+
+	// Set up 2D Matrix to store mean and standard deviation from each 'chunk'. We will proceed 
+	// by precalculating these for each chunk and then aggregating the values from the portions 
+	// of the chunks overlapped by the ROI to decide whether or not the current pixel is part of 
+	// a star. This changes the operation from O(2 * w * _image.rows * _image.cols) to O(6 * 
+	// _image.rows * _image.cols / w + _image.rows * _image.cols) - a dramatic reduction for 
+	// {w} > 2.
+	long dw = w * 2;
+	size_t _rows = std::ceil(_image.rows / (double)dw);		// Explicit `double` cast is required for ceil to work how we want
+	size_t _cols = std::ceil(_image.cols / (double)dw);		// without it the integer division results in premature truncation
+	Matrix<Chunk> chunks(_rows, _cols);
+	Chunk chunk;
+	long r = image.rows - 1, c = image.cols - 1;
+
+	gaussian_estimate(image.ptr(r, c), image.cols, (r - w > 0 ? w : r), (r + w < image.rows ? w : image.rows - r - 1),
+							 				       (c - w > 0 ? w : c), (c + w < image.cols ? w : image.cols - c - 1));
+//	char x;
+//	std::cin >> x;
+
+	std::cout << "Precalculating chunk means... " << std::endl;
+	for (r = 0; r < _rows; r ++, pixel += dw * (image.cols -  _cols)) {	// Have to iterate {pixel} on both loops to account for the y-dimension of the chunks
+		print_percent(r, _rows);
+		for (c = 0; c < _cols; c ++, pixel += dw) {
+//			std::cout << "(c, r) : (" << std::setw(4) << c * dw << ",  " << std::setw(4) << r * dw << ") ";
+//			std::cout << (int)(pixel - image.ptr(r * dw, c * dw)) << "\n";
+			chunks(r, c) = gaussian_estimate(pixel, image.cols, (r * dw - w > 0 ? w : r * dw), (r * dw + w < image.rows ? w : image.rows - r * dw - 1),
+												 				(c * dw - w > 0 ? w : c * dw), (c * dw + w < image.cols ? w : image.cols - c * dw - 1));
+			chunks(r, c).pos = Pos {r, c};
+		}
+//		std::cout << std::flush;
+	}
+
+	std::cout << "Extracting stars based on chunksize " << w << "x" << w << " and z-score threshold of " << z << "... " << std::endl;
+	double _r, _c, _it = 1.0 / dw;		// Set up slower iterators to convert between {image} iteration and {chunk} iteration
+	for (r = 0, _r = 0, pixel = image.ptr(0, 0), _out = out.ptr(0, 0); r < image.rows; r ++, _r += _it) {
+		print_percent(r, image.rows);
+		for (c = 0, _c = 0; c < image.cols; c ++, pixel ++, _out ++, _c += _it) {
+			chunk = chunks((size_t)_r, (size_t)_c);
+//			std::cout << chunk;
+			if (_c > 0) chunk += chunks((size_t)_r, (size_t)(_c - 1));
+			if (_r > 0) chunk += chunks((size_t)(_r - 1), (size_t)_c);
+			if (_c < _cols - 1) chunk += chunks((size_t)_r, (size_t)(_c + 1));
+			if (_r < _rows - 1) chunk += chunks((size_t)(_r + 1), (size_t)_c);
+//			std::cout << chunk << std::endl;
+
+			// Not taking the absolute value of the difference here because we only want 
+			// pixels that are {z} standard deviations brighter than their surroundings
+			if (*pixel - chunk.mean > z * chunk.std) *_out = 255;
+			continue;
+			std::cout << "Pixel (" << std::setw(2) << r << ", " << std::setw(2) << c << ") - " << std::setw(3) << (int)*pixel << "  ";
+			std::cout << "Chunk: " << chunks((size_t)_r, (size_t)_c);
+			std::cout << "Pixel accepted: " << std::boolalpha << (*_out == 255) << "\n";
+		}
+		continue;
+		std::cout << std::flush;
+		char x;
+		std::cin >> x;
+	}
+	
+	return out;
+}
+Chunk gaussian_estimate(const uchar* pixel, const size_t &cols, const long &b, const long &t, const long &l, const long &r) {
+// Get the mean and variance of a region of interest (ROI) determined by the bandwidth in [gaussian_find]
+//	std::cout << "  Extent: (" << b + t << ", " << l + r << ") \n";
+
+	Chunk chunk;
+	chunk.n = (l + r) * (b + t);
+	// Find the mean of the region of interest (ROI)
+//	std::cout << "  Pixels: ";
+	for (long _r = -b; _r < t; _r++) {
+		for (long _c = -l; _c < r; _c++) { 
+			chunk.mean += *(pixel + _c + _r * cols);
+//			std::cout << (int)*(pixel + _c + _r * cols) << " ";
+		}
+	}
+//	std::cout << "\n";
+//	std::cout << "  sum:    " << chunk.mean << "\n";
+//	std::cout << "  n:      " << chunk.n << "\n";
+	chunk.mean /= chunk.n;
+//	std::cout << "  mean:   " << chunk.mean << "\n\n";
+
+	// Find the standard deviation of the region of interest (ROI)
+	for (long _r = -b; _r < t; _r++) {
+		for (long _c = -l; _c < r; _c++) chunk.std += abs(*(pixel + _c + _r * cols) - chunk.mean);
+	}
+	chunk.std /= chunk.n;
+	chunk.var = std::pow(chunk.std, 2);
+	chunk.n;
+
+	return chunk;
 }
 
 std::vector<std::pair<double, double>> star_positions(const cv::Mat3b &starmask, const size_t &n) {

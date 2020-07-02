@@ -25,7 +25,7 @@ LIBS =     -lopencv_gapi -lopencv_stitching -lopencv_aruco -lopencv_bgsegm -lope
            -lavutil -lavcodec -lavformat -lavdevice -lavfilter -lswscale                            \
            -lboost_program_options -lncurses -lstdc++fs
                     
-LFLAGS   = -Wl,-rpath,/usr/local/lib
+LFLAGS   = -Wall -Wl,-rpath,/usr/local/lib
 LIBDIRS   = $(LFLAGS) -L/usr/local/lib/ -L/usr/lib/boost
 
 #Output coloring
@@ -43,6 +43,7 @@ OBJS   = $(BUILD)/enhance.o               \
         $(BUILD)/processing.o             \
         $(BUILD)/compute.o                \
         $(BUILD)/operators.o		      \
+        $(BUILD)/chunk.o				  \
         $(BUILD)/iocustom.o
         
 STARTRAILS = $(BUILD)/startrails.o       \

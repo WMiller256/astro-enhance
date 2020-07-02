@@ -8,7 +8,8 @@ int main(int argn, char** argv) {
 
 	cv::Mat3b anchor = read_image(_anchor);
 //	cv::Mat3b compar = read_image(_compar);
-	cv::Mat3b result;
+	cv::Mat result;
 //	align_stars(anchor, compar, result);
-	gaussian_find(anchor);
+	result = gaussian_find(anchor, 10, 8);
+	cv::imwrite("starmask.tif", result);
 }
