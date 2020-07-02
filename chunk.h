@@ -16,6 +16,7 @@
 #include <iomanip>
 #include <iostream>
 
+// Struct to store position information
 struct Pos {
 	long x, y;
 };
@@ -24,6 +25,11 @@ Pos operator*(const double &s, const Pos &p);
 Pos operator/(const Pos &p, const double &s);
 Pos operator/(const double &s, const Pos &p);
 Pos operator+(const Pos &l, const Pos &r);
+
+// Struct to store vertical and horizontal extent
+struct Extent {
+	long l, r, b, t;
+};
 
 class Chunk;
 class Chunk {

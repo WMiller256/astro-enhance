@@ -10,6 +10,6 @@ int main(int argn, char** argv) {
 //	cv::Mat3b compar = read_image(_compar);
 	cv::Mat result;
 //	align_stars(anchor, compar, result);
-	result = gaussian_find(anchor, 10, 8);
+	result = gaussian_find(anchor, 10, 12);
 	cv::imwrite("starmask.tif", result);
 }

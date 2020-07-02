@@ -1,8 +1,6 @@
 
 #include "enhance.h"
 
-using namespace cv;
-
 double star_threshold;
 std::string mode;
 int nn = 0;
@@ -33,18 +31,18 @@ int main(int argn, char** argv) {
 		}
 	}
 	if (mode == "frames") {	
-		std::vector<Mat3b> images = read_images(files);
-		Mat3b coadded_image = coadd(images);
-		Mat3b star_trails = star_trail(images);
-		Mat3b output = coadded_image + star_trails;
+		std::vector<cv::Mat3b> images = read_images(files);
+		cv::Mat3b coadded_image = coadd(images);
+		cv::Mat3b star_trails = star_trail(images);
+		cv::Mat3b output = coadded_image + star_trails;
 		imwrite("./composite.tif", output);
 	}
 	else if (mode == "video") {
-		std::vector<Mat3b> frames = extract_frames(files);
-		Mat3b coadded_image = coadd(frames);
-		Mat3b star_trails = star_trail(frames);
+		std::vector<cv::Mat3b> frames = extract_frames(files);
+		cv::Mat3b coadded_image = coadd(frames);
+		cv::Mat3b star_trails = star_trail(frames);
 		std::cout << "Coadding... " << std::flush;
-		Mat3b output = coadded_image + star_trails;
+		cv::Mat3b output = coadded_image + star_trails;
 		std::cout << green+bright+" done"+res+"." << std::endl;
 		output.convertTo(output, CV_8UC3);
 		imshow("Image", output);
