@@ -3,7 +3,7 @@
 
 using namespace cv;
 
-float star_threshold;
+double star_threshold;
 std::string mode;
 int nn = 0;
 

@@ -49,9 +49,9 @@ int main(int argn, char** argv) {
 			("advanced,a",   po::bool_switch()->default_value(false), "Enable advanced coadding"
 				" (where pixels below a certain brightness are ignored).")
 			("nfeatures,n",  po::value<int>(&max_features), "The maximum number of matches to create")
-			("separation",   po::value<float>(&separation_adjustment), "The maximum permissible separation between"
+			("separation",   po::value<double>(&separation_adjustment), "The maximum permissible separation between"
 				" the pixel coordinates of each match in one image compared to another.")
-			("matchpercent", po::value<float>(&good_match_percent), "The percentage of matches to keep - matches"
+			("matchpercent", po::value<double>(&good_match_percent), "The percentage of matches to keep - matches"
 				" are first sorted by match quality and then only this percent of matches are kept.")
 			("draw",			  po::bool_switch()->default_value(false), "Draw the matches between each pair of images")
 			("threshold",	  po::value<double>(&threshold)->default_value(0.1), "Only in effect if --advanced is true"

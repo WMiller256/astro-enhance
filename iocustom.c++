@@ -24,7 +24,7 @@ static std::vector<int> b = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 										0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 void print_percent(int current, int total) {
-	float percent = ((float)current/(float)(total - 1))*100.0;
+	double percent = ((double)current/(double)(total - 1))*100.0;
 	int idx = (int)percent - 1 >= 0 ? (int)percent : 0;
 	if (total == 1 || current > total || percent > 100) return;
 

@@ -25,6 +25,27 @@ std::ostream& operator<<(std::ostream &os, const cv::Vec3b &v) {
 	return os;
 }
 
+std::pair<double, double> operator+(const std::pair<double, double> &l, const double &r) {
+	return std::make_pair(std::get<0>(l) + r, std::get<1>(l) + r);
+}
+std::pair<double, double> operator+(const double &l, const std::pair<double, double> &r) {
+	return std::make_pair(std::get<0>(r) + l, std::get<1>(r) + l);
+}
+
+std::pair<double, double> operator-(const std::pair<double, double> &l, const std::pair<double, double> &r) {
+	return std::make_pair(std::get<0>(l) - std::get<0>(r), std::get<1>(l) - std::get<1>(r));
+}
+std::pair<double, double> operator+(const std::pair<double, double> &l, const std::pair<double, double> &r) {
+	return std::make_pair(std::get<0>(l) + std::get<0>(r), std::get<1>(l) + std::get<1>(r));
+}
+std::vector<std::pair<double, double>> operator-(const std::vector<std::pair<double, double>> &l, const std::pair<double, double> &r) {
+	std::vector<std::pair<double, double>> result;
+	result.reserve(l.size());
+	for (const auto &e : l) result.push_back(e - r);
+	
+	return result;
+}
+
 // Current standard does not fully support atomic double
 double fetch_add(std::atomic<double>* shared, const double &h) {
 	double expected = shared->load();
@@ -34,7 +55,6 @@ double fetch_add(std::atomic<double>* shared, const double &h) {
 
 // Not technically operators but definitely belong here
 double diff(const std::vector<std::pair<double, double>> &l, const std::vector<std::pair<double, double>> &r) {
-// This should be templated but I couldn't get it to work as a templated function so...
 	// Protect against size mismatch
 	if (l.size() != r.size()) return double(0);
 	
@@ -44,7 +64,7 @@ double diff(const std::vector<std::pair<double, double>> &l, const std::vector<s
 
 	// Parallelized sum of total separations (very brute force, very intensive).
 	// Also note that the range-based for syntax can't be used for outer loop with OMP
-#pragma omp parallel for schedule(dynamic)
+	#pragma omp parallel for schedule(dynamic)
 	for (size_t ii = 0; ii < l.size(); ii ++) {
 		double min = distance(l[ii], r[0]);
 
@@ -55,7 +75,7 @@ double diff(const std::vector<std::pair<double, double>> &l, const std::vector<s
 	return result;
 }
 
-template <typename T> // This assumes T is a primitive, it will fail otherwise
-double distance(const std::pair<T, T> &l, const std::pair<T, T> &r) {
+// This assumes T is a primitive, it will fail otherwise
+double distance(const std::pair<double, double> &l, const std::pair<double, double> &r) {
 	return (double)std::sqrt(std::pow(std::get<0>(l) - std::get<0>(r), 2) + std::pow(std::get<1>(l) - std::get<1>(r), 2));
 }

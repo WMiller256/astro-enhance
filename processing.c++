@@ -15,8 +15,8 @@
 
 int max_features;
 bool draw;
-float good_match_percent;
-float separation_adjustment;
+double good_match_percent;
+double separation_adjustment;
 std::atomic<int> progress(0);
 
 void accumulate(const std::vector<cv::Mat> images, cv::Mat &m, const size_t &n) {
@@ -193,10 +193,10 @@ cv::Mat4b advanced_coadd(const std::vector<cv::Mat3b> images, double threshold) 
 					mask[r][c] += 1;
 				}				
 /*				if (r == m.rows/2 && c == m.cols/2) {
-					std::cout << "BGRA mpixel: (" << (float)mpixel[0] << ", " << (float)mpixel[1] << ", " << (float)mpixel[2] << ", " << (float)mpixel[3] << ")" << std::endl;
-					std::cout << "BGRA pixel:  (" << (float)pixel[0] << ", " << (float)pixel[1] << ", " << (float)pixel[2] << ", " << (float)pixel[3] << ")" << std::endl;
+					std::cout << "BGRA mpixel: (" << (double)mpixel[0] << ", " << (double)mpixel[1] << ", " << (double)mpixel[2] << ", " << (double)mpixel[3] << ")" << std::endl;
+					std::cout << "BGRA pixel:  (" << (double)pixel[0] << ", " << (double)pixel[1] << ", " << (double)pixel[2] << ", " << (double)pixel[3] << ")" << std::endl;
 					mpixel = m.at<cv::Vec4b>(r, c);
-					std::cout << "BGRA mpixel: (" << (float)mpixel[0] << ", " << (float)mpixel[1] << ", " << (float)mpixel[2] << ", " << (float)mpixel[3] << ")\n" << std::endl;
+					std::cout << "BGRA mpixel: (" << (double)mpixel[0] << ", " << (double)mpixel[1] << ", " << (double)mpixel[2] << ", " << (double)mpixel[3] << ")\n" << std::endl;
 				}
 */			}
 		}
@@ -206,7 +206,7 @@ cv::Mat4b advanced_coadd(const std::vector<cv::Mat3b> images, double threshold) 
 	for (int ii = 0; ii < m.rows; ii ++) {
 		print_percent(ii, m.rows);
 		for (int jj = 0; jj < m.cols; jj ++) {
-			m.at<cv::Vec4b>(ii, jj) = m.at<cv::Vec4b>(ii, jj) / (float)mask[ii][jj];
+			m.at<cv::Vec4b>(ii, jj) = m.at<cv::Vec4b>(ii, jj) / (double)mask[ii][jj];
 		}
 	}
 	
@@ -218,8 +218,8 @@ cv::Mat4b advanced_coadd(const std::vector<cv::Mat3b> images, double threshold) 
 	return output;
 }
 
-void align_stars(cv::Mat &anc, cv::Mat &com, cv::Mat &result, bool translation, bool rotation, bool perspective) {
-	// Do a downhill minimization by repeatedly sampling the translation-rotation-perspective 
+void align_stars(cv::Mat &anc, cv::Mat &com, cv::Mat &result) {
+	// Do a downhill minimization by repeatedly sampling the translation-rotation-pespective
 	// parameter space and iteratively refining. This method works best for images with dim or 
 	// no foreground and little star trailing. For images that do not satisfy this, [align_images]
 	// should be used instead.
@@ -227,24 +227,56 @@ void align_stars(cv::Mat &anc, cv::Mat &com, cv::Mat &result, bool translation, 
 	// {com} - comparison image
 	// {result} - result after alignment
 
+	// NOTE Should be arguments
+	const size_t n = 25; 
+	const size_t iters = 4;
+
 	// Extract a mask of only the brightest stars (within 0.5% of max brightness)
-	cv::Mat3b anc_stars = find_stars(anc, find_max({anc}), 2);
-	cv::Mat3b com_stars = find_stars(com, find_max({com}), 2);
+	const cv::Mat3b anc_stars = find_stars(anc, find_max({anc}), 2);
+	const cv::Mat3b com_stars = find_stars(com, find_max({com}), 2);
 
 	// Convert star masks into vector of positions
-	std::vector<std::pair<double, double>> anc_pos = star_positions(anc_stars, 100);
-	std::vector<std::pair<double, double>> com_pos = star_positions(com_stars, 100);
+	const std::vector<std::pair<double, double>> anc_pos = star_positions(anc_stars, 100);
+	const std::vector<std::pair<double, double>> com_pos = star_positions(com_stars, 100);
 
-	const size_t n = 10;
+	// Track the location and value of the minimum difference
 	double min = diff(anc_pos, com_pos);
-	std::cout << min << std::endl;
-	size_t where = 0;
-	std::pair<std::pair<double, double>, std::pair<double, double>> tran_lim = std::make_pair(std::make_pair(-com.cols, anc.cols), 
-																							  std::make_pair(-com.rows, anc.rows));
-	std::pair<double, double> rot_lim = std::make_pair(-180, 180);	
-	std::pair<double, double> pers_lim = std::make_pair(-90, 90);
-	for (int ii = 0; ii < 4; ii ++) {		
+	std::tuple<double, double, double> where = std::make_tuple(0, 0, 0);
+
+	// Keep track of the size of the current parameter subspace.
+	double rot_it = Pi*2;
+	double x_it = (anc.cols + com.cols);
+	double y_it = (anc.rows + com.rows);
+
+	std::cout << "Aligning by star field..." << std::endl;
+	// Do the iteratively refined minimization
+	for (size_t ii = 0; ii < iters; ii ++, rot_it /= n, x_it /= n, y_it /=n) {
+
+		// Reduce the search space according to the location of the minimum in the previous iteration
+		std::pair<double, double> rot_lim = std::make_pair(-rot_it / 2.0, rot_it / 2.0) + std::get<0>(where);
+		std::pair<double, double> x_lim = std::make_pair(-x_it / 2.0, x_it / 2.0) + std::get<1>(where);
+		std::pair<double, double> y_lim = std::make_pair(-y_it / 2.0, y_it / 2.0) + std::get<2>(where);
+
+		// Would prefer the loop iterators be floating point instead of storing the whole vector, but OMP doesn't work like that :(
+		std::vector<double> _rot = linspace(rot_lim, n);
+		std::vector<double> _x = linspace(x_lim, n);
+		std::vector<double> _y = linspace(y_lim, n);
+
+		for (const auto &rot : _rot) {
+			for (const auto &x : _x) {
+				for (const auto &y : _y) {
+					double _diff = diff(anc_pos, rotate(com_pos, rot) - std::make_pair(x, y));
+					if (_diff < min) {
+						min = _diff;
+						where = std::make_tuple(rot, x, y);
+					}
+				}
+			}
+		}
+		print_percent(ii, iters);
 	}
+	std::cout << std::get<0>(where) << " " << std::get<1>(where) << " " << std::get<2>(where) << std::endl;
+	std::cout << min << std::endl;
 }
 
 void align_images(cv::Mat &im1, cv::Mat &im2, cv::Mat &im1Reg) {
@@ -269,12 +301,12 @@ void align_images(cv::Mat &im1, cv::Mat &im2, cv::Mat &im1Reg) {
 	cv::Ptr<cv::DescriptorMatcher> matcher = cv::DescriptorMatcher::create("BruteForce-Hamming");
 	matcher->match(descriptors1, descriptors2, matches, cv::Mat());
 	
-	std::vector<float> separations = find_separations(matches, keypoints1, keypoints2);
+	std::vector<double> separations = find_separations(matches, keypoints1, keypoints2);
 	
 	// Sort matches by score
-	std::vector<std::pair<float, cv::DMatch> > paired;
+	std::vector<std::pair<double, cv::DMatch> > paired;
 	for (int ii = 0; ii < matches.size(); ii ++) {
-		std::pair<float, cv::DMatch> p(separations[ii], matches[ii]);
+		std::pair<double, cv::DMatch> p(separations[ii], matches[ii]);
 		paired.push_back(p);
 	}
 	std::sort(paired.begin(), paired.end());
@@ -314,12 +346,12 @@ void align_images(cv::Mat &im1, cv::Mat &im2, cv::Mat &im1Reg) {
 }
  
 // Calculates the separation (pixel distance) between two matched features
-float find_separation(cv::DMatch m, std::vector<cv::KeyPoint> kp1, std::vector<cv::KeyPoint> kp2) {
+double find_separation(cv::DMatch m, std::vector<cv::KeyPoint> kp1, std::vector<cv::KeyPoint> kp2) {
 	return sqrt(pow(kp1[m.queryIdx].pt.x - kp2[m.trainIdx].pt.x, 2) + pow(kp1[m.queryIdx].pt.y - kp2[m.trainIdx].pt.y, 2));
 }
 
-std::vector<float> find_separations(std::vector<cv::DMatch> matches, std::vector<cv::KeyPoint> kp1, std::vector<cv::KeyPoint> kp2) {
-	std::vector<float> separations;
+std::vector<double> find_separations(std::vector<cv::DMatch> matches, std::vector<cv::KeyPoint> kp1, std::vector<cv::KeyPoint> kp2) {
+	std::vector<double> separations;
 	for (const auto &match : matches) {
 		separations.push_back(find_separation(match, kp1, kp2));
 	}

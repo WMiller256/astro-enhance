@@ -1,8 +1,8 @@
-#ifndef ENHANCE_H
-#define ENHANCE_H
+#pragma once
 
 // std
 #include <atomic>
+#include <cmath>
 #include <experimental/filesystem>
 #include <future>
 #include <iomanip>
@@ -41,11 +41,13 @@ extern "C" {
 
 extern bool draw;
 extern int max_features;
-extern float good_match_percent;
-extern float separation_adjustment;
+extern double good_match_percent;
+extern double separation_adjustment;
 
 const int max_threads = std::thread::hardware_concurrency();
-    
+
+const double Pi = 3.14159265358979323846264;
+
 namespace po = boost::program_options;
 namespace fs = std::experimental::filesystem;
 
@@ -55,12 +57,13 @@ std::vector<cv::Mat3b> read_images(std::vector<std::string> files);    // Read t
 void subtract(const std::vector<std::string> files, 
               const std::string &_darkframe, const double &factor = 1.0);
 cv::Mat3b coadd(const std::vector<cv::Mat3b> images);                  // Average all pixels from {images}
-cv::Mat3b advanced_coadd(const std::vector<cv::Mat3b> images,          // Selective coadd ignoring pixels with brightness 
-                                 float threshold = 0.3);               // below {max_intensity}*{threshold}
+cv::Mat4b advanced_coadd(const std::vector<cv::Mat3b> images,          // Selective coadd ignoring pixels with brightness 
+                                 double threshold = 0.3);              // below {max_intensity}*{threshold}
 cv::Mat3b star_trail(const std::vector<cv::Mat3b> images);             // Find star trails from {images} and return a composite with
                                                                        // star trails stacked on coadded image
-cv::Mat3b find_stars(cv::Mat3b image, uchar max_intensisty,            // Finds stars in {image} based on relative brightness, 
-                     int nn = 0, float star_threshold = 0.995);        // returning a [Mat3b] mask of stars 
+cv::Mat3b find_stars(const cv::Mat3b &image, uchar max_intensisty,     // Finds stars in {image} based on relative brightness, 
+                     int nn = 0, double star_threshold = 0.995);       // returning a [Mat3b] mask of stars 
+cv::Mat3b gaussian_find(const cv::Mat3b &_image);					   // Find stars by 2D Gaussian fitting
 std::vector<std::pair<double, double>> star_positions(const cv::Mat3b &image, 
 													  const size_t &n = 100);
 uchar find_max(std::vector<cv::Mat3b> images);                         // Find the brightest pixel in {images}
@@ -70,4 +73,3 @@ bool brighter_than(cv::Vec4b pixel, double threshold);                 // Evalua
 std::vector<cv::Mat3b> extract_frames(std::vector<std::string> files); // Extract the frames from a video file into frames in a 
                                                                        // vector of [Mat3b] objects
 std::vector<cv::Mat3b> read_video(std::vector<std::string> videos);    // Extract the frames from a video using FFMPEG library
-#endif

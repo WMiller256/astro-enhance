@@ -45,14 +45,16 @@ cv::Mat3b star_trail(const std::vector<cv::Mat3b> images) {
 	uchar max_intensity = find_max(images);
 
 	std::cout << "Finding star trails..." << std::endl;
-	for (int img = 0; img < images.size(); ++img) {						// Loop through every image in the vector {images}
+	for (size_t img = 0; img < images.size(); ++img) {						// Loop through every image in the vector {images}
 		images[img].convertTo(color_mat, CV_64FC3);
 		cv::Mat3b stars = find_stars(color_mat, max_intensity);
-		for (int ii = 0; ii < m.rows; ii ++) {
-			for (int jj = 0; jj < m.cols; jj ++) {
-				if (brightness(stars.at<cv::Vec3b>(ii, jj)) > brightness(m.at<cv::Vec3b>(ii, jj))) {
-					m.at<cv::Vec3b>(ii, jj) = stars.at<cv::Vec3b>(ii, jj);
-				}
+
+		// Once the stars have been found, combine the star masks
+		cv::Vec3b* star = stars.ptr<cv::Vec3b>(0, 0);
+		cv::Vec3b* im = m.ptr<cv::Vec3b>(0, 0);
+		for (size_t rc = 0; rc < m.rows * m.cols; rc++, star++, im++) {
+			if (brightness(*star) > brightness(*im)) {
+				*im = *star;
 			}
 		}
 		print_percent(img, images.size());
@@ -60,22 +62,21 @@ cv::Mat3b star_trail(const std::vector<cv::Mat3b> images) {
 	return m;
 }
 
-cv::Mat3b find_stars(cv::Mat3b image, uchar max_intensity, 
-							int nn, float star_threshold) {				// Find stars in the given image and return a mask of stars
-	cv::Mat3b out(image.rows, image.cols, CV_64FC3);					// Initialize output object of type CV_64FC3
-	out.setTo(cv::Scalar(0, 0, 0, 0));									// Set every channel to zeros
-	for (int ii = 0; ii < out.rows; ii++) {								// Then loop through every pixel
-		for (int jj = 0; jj < out.cols; jj++) {	
-			cv::Vec3b input = image.at<cv::Vec3b>(ii, jj);						// Find the pixel from the input image and 
-			if (brightness(input) > max_intensity*star_threshold && 			// If the brightness is greater than the star threshold
-				brightness(input) > brightness(out.at<cv::Vec3b>(ii, jj))) {	// and greater than the current output brightness at that location
-				out.at<cv::Vec3b>(ii, jj) = input;								// then apply the new pixel values to the output image.
+cv::Mat3b find_stars(const cv::Mat3b &image, uchar max_intensity, 
+							int nn, double star_threshold) {				// Find stars in the given image and return a mask of stars
+	cv::Mat3b out = cv::Mat::zeros(image.rows, image.cols, CV_64FC3);		// Initialize output object of type CV_64FC3
+
+	cv::Vec3b* pixel = const_cast<cv::Vec3b*>(image.ptr<cv::Vec3b>(0, 0));
+	for (size_t ii = 0; ii < out.rows; ii++) {									// Then loop through every pixel
+		for (size_t jj = 0; jj < out.cols; jj++, pixel++) {						// Iterate the data pointer only with the fastest loop
+			if (brightness(*pixel) > max_intensity*star_threshold && 			// If the brightness is greater than the star threshold
+				brightness(*pixel) > brightness(out.at<cv::Vec3b>(ii, jj))) {	// and greater than the current output brightness at that location
+				out.at<cv::Vec3b>(ii, jj) = *pixel;								// then apply the new pixel values to the output image.
 				for (int kk = -nn; kk < nn; kk ++) {
 					for (int mm = -nn; mm < nn; mm ++) {
-						if (ii + kk < out.rows && jj + mm < out.cols && ii + kk > 0 && jj + mm > 0) {
-							if (brightness(image.at<cv::Vec3b>(ii + kk, jj + mm)) > brightness(out.at<cv::Vec3b>(ii + kk, jj + mm))) {
+						if ( (ii + kk < out.rows && jj + mm < out.cols && ii + kk > 0 && jj + mm > 0) && 
+							 (brightness(image.at<cv::Vec3b>(ii + kk, jj + mm)) > brightness(out.at<cv::Vec3b>(ii + kk, jj + mm))) ) {
 								out.at<cv::Vec3b>(ii + kk, jj + mm) = image.at<cv::Vec3b>(ii + kk, jj + mm);
-							}
 						}
 					}
 				}
@@ -83,6 +84,24 @@ cv::Mat3b find_stars(cv::Mat3b image, uchar max_intensity,
 		}
 	}
 	return out;															// Return a mask with stars isolated
+}
+
+cv::Mat3b gaussian_find(const cv::Mat3b &_image) {
+	// First convert image to grayscale
+	cv::Mat image(_image.rows, _image.cols, CV_8U);
+	cvtColor(_image, image, cv::COLOR_BGR2GRAY);
+
+	// Retrieve the minimum and total
+	double min;
+	cv::minMaxLoc(image, &min);
+
+	// Iterating pointer is much faster than using [.at<>()]
+	double tot(0);
+	uchar* pixel = image.ptr(0, 0);
+	for (size_t rc = 0; rc < image.rows * image.cols; rc++, pixel++) tot += *pixel;
+	
+	std::cout << tot << std::endl;
+	return cv::Mat3b();
 }
 
 std::vector<std::pair<double, double>> star_positions(const cv::Mat3b &starmask, const size_t &n) {
