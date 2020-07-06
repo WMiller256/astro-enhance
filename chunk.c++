@@ -21,6 +21,8 @@ Pos operator/(const Pos &p, const double &s) {
 Pos operator/(const double &s, const Pos &p) { return p / s; }
 Pos operator+(const Pos &l, const Pos &r) { return Pos {l.x + r.x, l.y + r.y}; }
 
+bool operator==(const Pos &l, const Pos &r) { return (l.x == r.x && l.y == r.y); }
+
 Chunk::Chunk() {
 	reset();
 }

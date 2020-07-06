@@ -49,6 +49,7 @@ extern "C" {
 #include "operators.h"
 
 // Other
+#include "blob.h"
 #include "chunk.h"
 #include "colors.h"
 #include "matrix.h"

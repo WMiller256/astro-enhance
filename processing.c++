@@ -351,3 +351,38 @@ std::vector<double> find_separations(std::vector<cv::DMatch> matches, std::vecto
     }
     return separations;
 }
+
+void interpolate_simple(cv::Mat3b &im, const Blob &blob) {
+    
+}
+
+// Extract blobs from a binary image mask in CV_8U1C colorspace
+std::vector<Blob> blob_extract(const cv::Mat &mask) {
+    std::vector<Blob> blobs;
+    uchar* pixel;
+    uchar* start = mask.ptr(0, 0);
+
+    // Iterate using pointer arithmetic for efficiency (assumes contiguous storage)
+    for (pixel = start; pixel < mask.ptr(mask.rows - 1, mask.cols - 1); pixel ++) {
+        if (*pixel) {  // If the current pixel value is non-zero
+            Blob blob;
+            _blob_extract(mask, blob, pixel, start);
+            blobs.push_back(blob);
+        }
+    }
+    
+    return blobs;
+}
+
+// Recursive function to extract a single blob given an image mask and a starting pixel 
+void _blob_extract(const cv::Mat &mask, Blob &blob, const uchar* pixel, const uchar* &start) {
+
+    Pos p { (pixel - start) / mask.cols, (pixel - start) % mask.cols };
+    if (*pixel) {
+        blob.to_blob(p);
+        _blob_extract(mask, blob, pixel + 1, start);
+        _blob_extract(mask, blob, pixel + mask.rows, start);
+    }
+    else blob.to_perim(p);
+    
+}

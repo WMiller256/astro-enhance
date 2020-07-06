@@ -44,6 +44,7 @@ OBJS   = $(BUILD)/enhance.o               \
         $(BUILD)/compute.o                \
         $(BUILD)/operators.o		      \
         $(BUILD)/chunk.o				  \
+        $(BUILD)/blob.o                   \
         $(BUILD)/iocustom.o
         
 STARTRAILS = $(BUILD)/startrails.o       \

@@ -22,3 +22,6 @@ void align_images(cv::Mat &im1, cv::Mat &im2, cv::Mat &imreg);				// Aligns two 
 double find_separation(cv::DMatch m, std::vector<cv::KeyPoint> kp1, std::vector<cv::KeyPoint> kp2);
 // Calculates the separation (pixel distance) between all matched features in {matches}
 std::vector<double> find_separations(std::vector<cv::DMatch> matches, std::vector<cv::KeyPoint> kp1, std::vector<cv::KeyPoint> kp2);
+
+void interpolate_simple(cv::Mat3b &im, const cv::Mat &starmask);
+std::vector<Blob> blob_extract(const cv::Mat &im);
