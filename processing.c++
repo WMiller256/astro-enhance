@@ -45,7 +45,7 @@ void subtract(const std::vector<std::string> files, const std::string &_darkfram
     }
 }
 
-cv::Mat3b coadd(const std::vector<cv::Mat3b> images) {
+cv::Mat3b coadd(const std::vector<cv::Mat3b> &images) {
 //    std::cout << "{max_features} - " << max_features << std::endl;
 //    std::cout << "{good_match_percent} - " << good_match_percent << std::endl;
 //    std::cout << "{separation_adjustment} - " << separation_adjustment << std::endl;
@@ -60,7 +60,7 @@ cv::Mat3b coadd(const std::vector<cv::Mat3b> images) {
         e.setTo(cv::Scalar(0, 0, 0, 0));
     }
 
-    std::cout << "Converting the input images to CV_64FC3 ..." << std::endl;
+    std::cout << "Accumulating..." << std::endl;
     // Create either {nthreads} threads and give each a subset of images to process
     // or create one thread for each image. The latter only when {nthreads} < {images.size()}
     const size_t size = images.size();
@@ -89,6 +89,57 @@ cv::Mat3b coadd(const std::vector<cv::Mat3b> images) {
     std::cout << green+"done"+res+white+"." << std::endl;
     
     return out;
+}
+cv::Mat3b median(const std::vector<cv::Mat3b> &images) {
+// Takes the median at each pixel for a stack of images. Assumes the images
+// are aligned and that they are the same size.
+    const int nthreads = max_threads;
+    std::vector<cv::Mat> _result(3, cv::Mat::zeros(images[0].rows, images[0].cols, CV_8UC1));
+
+    std::vector<std::thread> threads(nthreads);
+    size_t offset = 0;
+    size_t block = ceil(images[0].rows * images[0].cols / (double)nthreads);
+    for (size_t ii = 0; ii < nthreads - 1; ii ++, offset += block) {
+        threads[ii] = std::thread(_median, images, std::ref(_result), offset, (offset + block) * 3);
+    }
+    threads.back() = std::thread(_median, images, std::ref(_result), offset, images[0].rows * images[0].cols * 3);
+
+    for (auto &t : threads) t.join();
+
+    cv::Mat3b result;
+    cv::merge(_result, result);
+    
+    return result;
+}
+void _median(const std::vector<cv::Mat3b> &images, std::vector<cv::Mat> &output, size_t offset, const size_t end) {
+// Abstraction for parallel execution of [median()]. Hard coded for use with 3-channel input 
+// only (pointer stuff doesn't work properly otherwise).
+    const size_t n = images.size();
+    std::vector<uchar> pixels(n);   // Initialize vector to store pixel values
+    const bool even = (n % 2);
+
+    // Array of pointers to the start of this thread's block of the output
+    std::array<uchar*, 3> start;
+    for (auto ii = 0; ii < 3; ii ++) start[ii] = output[ii].ptr(0, 0) + offset;
+
+    // Pointers to the starts of the corresponding region in the input images
+    std::vector<uchar*> img_ptrs(n);
+    for (size_t ii = 0; ii < n; ii ++) img_ptrs[ii] = (uchar*)images[ii].ptr(0, 0);
+
+    size_t im;
+    for (offset; offset < end; offset += 3, im = 0) {
+        for (size_t c = 0; c < 3; c ++) {
+            // Extract relevant pixel info for this location and channel
+            for (auto &p : pixels) p = *(img_ptrs[im++] + offset + c);
+
+            // Sort pixels 
+            std::sort(std::begin(pixels), std::end(pixels), [](const uchar &l, const uchar &r) { return l < r; }); 
+            if (even) *(start[c]) = pixels[n / 2 - 1] / 2 + pixels[n / 2] / 2;      // Unusual order of operations is to prevent uchar overflow
+            else *(start[c]) = pixels[n / 2];
+            
+            start[c] ++;        // Can't have this in the loop syntax because it will produce UB
+        }
+    }
 }
 
 std::vector<cv::Mat3b> scrub_hot_pixels(const std::vector<cv::Mat3b> images) {
@@ -226,8 +277,8 @@ void align_stars(cv::Mat &anc, cv::Mat &com, cv::Mat &result) {
     const size_t iters = 4;
 
     // Extract a mask of only the brightest stars (within 0.5% of max brightness)
-    const cv::Mat3b anc_stars = find_stars(anc, find_max({anc}), 2);
-    const cv::Mat3b com_stars = find_stars(com, find_max({com}), 2);
+    const cv::Mat3b anc_stars = brightness_find(anc, find_max({anc}), 2);
+    const cv::Mat3b com_stars = brightness_find(com, find_max({com}), 2);
 
     // Convert star masks into vector of positions
     const std::vector<std::pair<double, double>> anc_pos = star_positions(anc_stars, 100);
@@ -360,7 +411,7 @@ void interpolate_simple(cv::Mat3b &im, const Blob &blob) {
 std::vector<Blob> blob_extract(const cv::Mat &mask) {
     std::vector<Blob> blobs;
     uchar* pixel;
-    uchar* start = mask.ptr(0, 0);
+    uchar* start = const_cast<uchar*>(mask.ptr(0, 0));
 
     // Iterate using pointer arithmetic for efficiency (assumes contiguous storage)
     for (pixel = start; pixel < mask.ptr(mask.rows - 1, mask.cols - 1); pixel ++) {
@@ -375,7 +426,7 @@ std::vector<Blob> blob_extract(const cv::Mat &mask) {
 }
 
 // Recursive function to extract a single blob given an image mask and a starting pixel 
-void _blob_extract(const cv::Mat &mask, Blob &blob, const uchar* pixel, const uchar* &start) {
+void _blob_extract(const cv::Mat &mask, Blob &blob, uchar* pixel, uchar* start) {
 
     Pos p { (pixel - start) / mask.cols, (pixel - start) % mask.cols };
     if (*pixel) {

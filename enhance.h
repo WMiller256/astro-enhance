@@ -42,13 +42,15 @@ extern "C" {
 // Boost
 #include <boost/program_options.hpp>
 
+class Blob; // Forward declared for use in processing.h
+
 // enhance
 #include "iocustom.h"
 #include "processing.h"
 #include "compute.h"
 #include "operators.h"
 
-// Other
+// Other (some enhance headers depend on these declarations)
 #include "blob.h"
 #include "chunk.h"
 #include "colors.h"
@@ -79,7 +81,6 @@ std::vector<cv::Mat3b> read_video(std::vector<std::string> videos);             
 // Main methods
 void subtract(const std::vector<std::string> files, 
               const std::string &_darkframe, const double &factor = 1.0);
-cv::Mat3b coadd(const std::vector<cv::Mat3b> images);                            // Average all pixels from {images}
 cv::Mat4b advanced_coadd(const std::vector<cv::Mat3b> images,                    // Selective coadd ignoring pixels with brightness 
                                  double threshold = 0.3);                        // below {max_intensity}*{threshold}
 cv::Mat3b star_trail(const std::vector<cv::Mat3b> images);                       // Find star trails from {images} and return a composite with

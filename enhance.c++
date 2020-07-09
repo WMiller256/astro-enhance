@@ -92,11 +92,11 @@ cv::Mat gaussian_find(const cv::Mat3b &_image, long w, size_t z) {
    mean and standard deviation to decide if a pixel is likely part of a star or not
 
      {_image} - The input image
-     {w}         - The bandwidth so to speak, equal to the maximum possible 
-               value for half the sidelength of the ROI. NOTE - {w} is `long`
-               instead of `size_t` because it eliminates the need for signed-cast
-               when comparing r - w > 0 and c - w > 0
-    {z}      - The z-score threshold to use for filtering. Defaults to 12
+     {w}      - The bandwidth so to speak, equal to the maximum possible 
+                value for half the sidelength of the ROI. NOTE - {w} is `long`
+                instead of `size_t` because it eliminates the need for signed-cast
+                when comparing r - w > 0 and c - w > 0
+     {z}      - The z-score threshold to use for filtering. Defaults to 12
 */
     // First convert image to grayscale and set up binary output
     cv::Mat image(_image.rows, _image.cols, CV_8UC1);

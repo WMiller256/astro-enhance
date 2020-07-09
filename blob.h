@@ -13,6 +13,9 @@
 
 #pragma once
 
+#include <algorithm>
+#include <vector>
+
 #include "chunk.h" // Needed for Pos struct 
 
 class Blob {
@@ -29,4 +32,4 @@ public:
     bool blob_contains(Pos p);
     bool perim_contains(Pos p);
 
-}
+};

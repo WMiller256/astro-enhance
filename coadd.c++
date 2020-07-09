@@ -21,6 +21,7 @@
 int main(int argn, char** argv) {
 	std::vector<std::string> files;
 	bool pixel_scrubbing;
+	std::string mode;
 
 	po::options_description description("Allowed Options");
 
@@ -28,6 +29,7 @@ int main(int argn, char** argv) {
 		description.add_options()
 			("images,i", po::value<std::vector<std::string> >()->multitoken(), "The images to coadd,")
 			("scrub-hot-pixels,h", po::bool_switch()->default_value(false), "Scrub the hot pixels out of each image")
+			("mode", po::value<std::string>(&mode)->default_value("average"), "The accumulation mode, options are average or median.")
 		;
 	}
 	catch (...) {
@@ -50,6 +52,8 @@ int main(int argn, char** argv) {
 	std::vector<cv::Mat3b> images = read_images(files);
 	if (pixel_scrubbing) images = scrub_hot_pixels(images);
 
-	cv::Mat3b output = coadd(images);
+	cv::Mat3b output;
+	if (mode == "average") output = coadd(images);
+	else if (mode == "median") output = median(images);
 	cv::imwrite("./coadded.tif", output);	
 }
