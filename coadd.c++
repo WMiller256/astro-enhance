@@ -55,5 +55,5 @@ int main(int argn, char** argv) {
 	cv::Mat3b output;
 	if (mode == "average") output = coadd(images);
 	else if (mode == "median") output = median(images);
-	cv::imwrite("./coadded.tif", output);	
+	cv::imwrite("./coadded.tif", output);
 }

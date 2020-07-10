@@ -17,7 +17,7 @@ int max_features;
 bool draw;
 double good_match_percent;
 double separation_adjustment;
-std::atomic<int> progress(0);
+std::atomic<size_t> progress(0);
 
 void accumulate(const std::vector<cv::Mat> images, cv::Mat &m, const size_t &n) {
     // Use a temp image to hold the conversion of each input image to CV_64FC3
@@ -68,6 +68,8 @@ cv::Mat3b coadd(const std::vector<cv::Mat3b> &images) {
     const int nt = block > 0 ? nthreads : size;
     std::vector<std::thread> threads(nt);
     std::vector<cv::Mat> v(nt);
+
+    progress = 0;   // Have to reset progress to zero because the same object is used for all progress tracking
     print_percent(progress, size);
     for (int ii = 0; ii < nt - 1; ii ++) {
         threads[ii] = std::thread(accumulate, std::vector<cv::Mat>(images.begin() + ii * block, images.begin() + (ii + 1) * block), 
@@ -93,16 +95,20 @@ cv::Mat3b coadd(const std::vector<cv::Mat3b> &images) {
 cv::Mat3b median(const std::vector<cv::Mat3b> &images) {
 // Takes the median at each pixel for a stack of images. Assumes the images
 // are aligned and that they are the same size.
-    const int nthreads = max_threads;
+    const int nthreads = max_threads > images[0].rows * images[0].cols ? 1 : max_threads;
     std::vector<cv::Mat> _result(3, cv::Mat::zeros(images[0].rows, images[0].cols, CV_8UC1));
 
-    std::vector<std::thread> threads(nthreads);
-    size_t offset = 0;
+    // Calculate the size of the section of the image to be processed by each thead
     size_t block = ceil(images[0].rows * images[0].cols / (double)nthreads);
-    for (size_t ii = 0; ii < nthreads - 1; ii ++, offset += block) {
-        threads[ii] = std::thread(_median, images, std::ref(_result), offset, (offset + block) * 3);
+    size_t offset = 0;
+    size_t tidx = 1;
+
+    // Initialize the threads and pass appropriate arguments to each one
+    std::vector<std::thread> threads(nthreads);
+    for (long ii = 0; ii < nthreads - 1; ii ++, offset += block) {
+        threads[ii] = std::thread(_median, tidx++, images, std::ref(_result), offset, (offset + block) * 3);
     }
-    threads.back() = std::thread(_median, images, std::ref(_result), offset, images[0].rows * images[0].cols * 3);
+    threads.back() = std::thread(_median, tidx++, images, std::ref(_result), offset, images[0].rows * images[0].cols * 3);
 
     for (auto &t : threads) t.join();
 
@@ -111,9 +117,10 @@ cv::Mat3b median(const std::vector<cv::Mat3b> &images) {
     
     return result;
 }
-void _median(const std::vector<cv::Mat3b> &images, std::vector<cv::Mat> &output, size_t offset, const size_t end) {
+void _median(const int tidx, const std::vector<cv::Mat3b> &images, std::vector<cv::Mat> &output, size_t offset, const size_t end) {
 // Abstraction for parallel execution of [median()]. Hard coded for use with 3-channel input 
-// only (pointer stuff doesn't work properly otherwise).
+// only (pointer stuff would get too complicated otherwise).
+//    std::cout << "Thread "+std::to_string(tidx)+" started. Region: "+std::to_string(offset)+" through "+std::to_string(end)+"\n" << std::flush;
     const size_t n = images.size();
     std::vector<uchar> pixels(n);   // Initialize vector to store pixel values
     const bool even = (n % 2);
@@ -122,17 +129,19 @@ void _median(const std::vector<cv::Mat3b> &images, std::vector<cv::Mat> &output,
     std::array<uchar*, 3> start;
     for (auto ii = 0; ii < 3; ii ++) start[ii] = output[ii].ptr(0, 0) + offset;
 
-    // Pointers to the starts of the corresponding region in the input images
+    // Pointers to the starts of the input images
     std::vector<uchar*> img_ptrs(n);
     for (size_t ii = 0; ii < n; ii ++) img_ptrs[ii] = (uchar*)images[ii].ptr(0, 0);
 
     size_t im;
-    for (offset; offset < end; offset += 3, im = 0) {
-        for (size_t c = 0; c < 3; c ++) {
+    size_t total = output[0].rows * output[0].cols;
+    for (offset; offset < end; offset += 3) {
+        print_percent(progress++, total);
+        for (size_t c = 0; c < 3; c ++, im = 0) {
             // Extract relevant pixel info for this location and channel
             for (auto &p : pixels) p = *(img_ptrs[im++] + offset + c);
 
-            // Sort pixels 
+            // Sort pixel values for this channel and location accross all images
             std::sort(std::begin(pixels), std::end(pixels), [](const uchar &l, const uchar &r) { return l < r; }); 
             if (even) *(start[c]) = pixels[n / 2 - 1] / 2 + pixels[n / 2] / 2;      // Unusual order of operations is to prevent uchar overflow
             else *(start[c]) = pixels[n / 2];
@@ -140,6 +149,7 @@ void _median(const std::vector<cv::Mat3b> &images, std::vector<cv::Mat> &output,
             start[c] ++;        // Can't have this in the loop syntax because it will produce UB
         }
     }
+    std::cout << std::endl;
 }
 
 std::vector<cv::Mat3b> scrub_hot_pixels(const std::vector<cv::Mat3b> images) {

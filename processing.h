@@ -9,12 +9,14 @@
 
 #pragma once
 
+#include <atomic>
+
 #include "enhance.h"
 
 void accumulate(const std::vector<cv::Mat> images, cv::Mat &m, const size_t &n);
 cv::Mat3b coadd(const std::vector<cv::Mat3b> &images);
 cv::Mat3b median(const std::vector<cv::Mat3b> &images);
-void _median(const std::vector<cv::Mat3b> &images, std::vector<cv::Mat> &output, size_t offset, const size_t end);
+void _median(const int tidx, const std::vector<cv::Mat3b> &images, std::vector<cv::Mat> &output, size_t offset, const size_t end);
 
 std::vector<cv::Mat3b> scrub_hot_pixels(const std::vector<cv::Mat3b> images);
 
