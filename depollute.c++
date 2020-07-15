@@ -60,3 +60,4 @@ int main(int argn, char** argv) {
         cv::imwrite("depolluted.tif", image);
 	}
 }
+

@@ -43,6 +43,7 @@ public:
 	size_t n = 0;
 	Pos pos = {0, 0};
 	double mean = 0;
+	double median = 0;
 	double std = 0;
 	double var = 0;
 

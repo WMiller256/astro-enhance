@@ -65,6 +65,9 @@ DEPOLLUTE  = $(BUILD)/depollute.o        \
 SUBTRACT   = $(BUILD)/subtract.o         \
              $(OBJS)
 
+MED_SUBTRACT = $(BUILD)/median_subtract.o         \
+               $(OBJS)
+
 ADV_COADD  = $(BUILD)/advanced_coadd.o   \
              $(OBJS)
 
@@ -103,6 +106,11 @@ depollute: $(DEPOLLUTE)
 subtract: $(SUBTRACT)
 	@printf "[$(CYAN)Linking $(WHITE)]   $(BRIGHT)$(MAIN)$(WHITE) - $(MAGENTA)Binary$(WHITE)\n"
 	cd $(ABS); $(CC) $(SUBTRACT) $(LIBDIRS) -o $(BIN)/$@ $(LIBS)
+	@printf "[$(GREEN) Linked $(WHITE)]   $(BRIGHT)$(MAIN)$(WHITE) - $(MAGENTA)Binary$(WHITE)\n"
+
+median_subtract: $(MED_SUBTRACT)
+	@printf "[$(CYAN)Linking $(WHITE)]   $(BRIGHT)$(MAIN)$(WHITE) - $(MAGENTA)Binary$(WHITE)\n"
+	cd $(ABS); $(CC) $(MED_SUBTRACT) $(LIBDIRS) -o $(BIN)/$@ $(LIBS)
 	@printf "[$(GREEN) Linked $(WHITE)]   $(BRIGHT)$(MAIN)$(WHITE) - $(MAGENTA)Binary$(WHITE)\n"
 
 stacker: $(STACKER)

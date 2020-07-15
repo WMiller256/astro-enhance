@@ -92,7 +92,7 @@ cv::Mat3b coadd(const std::vector<cv::Mat3b> &images) {
     
     return out;
 }
-cv::Mat3b median(const std::vector<cv::Mat3b> &images) {
+cv::Mat3b median_coadd(const std::vector<cv::Mat3b> &images) {
 // Takes the median at each pixel for a stack of images. Assumes the images
 // are aligned and that they are the same size.
     const int nthreads = max_threads > images[0].rows * images[0].cols ? 1 : max_threads;
@@ -107,9 +107,9 @@ cv::Mat3b median(const std::vector<cv::Mat3b> &images) {
     std::cout << "Computing medians..." << std::endl;
     std::vector<std::thread> threads(nthreads);
     for (long ii = 0; ii < nthreads - 1; ii ++, offset += block) {
-        threads[ii] = std::thread(_median, tidx++, images, std::ref(_result), offset, (offset + block) * 3);
+        threads[ii] = std::thread(_median_coadd, tidx++, images, std::ref(_result), offset, (offset + block) * 3);
     }
-    threads.back() = std::thread(_median, tidx++, images, std::ref(_result), offset, images[0].rows * images[0].cols * 3);
+    threads.back() = std::thread(_median_coadd, tidx++, images, std::ref(_result), offset, images[0].rows * images[0].cols * 3);
 
     for (auto &t : threads) t.join();
 
@@ -118,7 +118,7 @@ cv::Mat3b median(const std::vector<cv::Mat3b> &images) {
     
     return result;
 }
-void _median(const int tidx, const std::vector<cv::Mat3b> &images, std::vector<cv::Mat> &output, size_t offset, const size_t end) {
+void _median_coadd(const int tidx, const std::vector<cv::Mat3b> &images, std::vector<cv::Mat> &output, size_t offset, const size_t end) {
 // Abstraction for parallel execution of [median()]. Hard coded for use with 3-channel input 
 // only (pointer stuff would get too complicated otherwise).
 //    std::cout << "Thread "+std::to_string(tidx)+" started. Region: "+std::to_string(offset)+" through "+std::to_string(end)+"\n" << std::flush;
@@ -447,4 +447,21 @@ void _blob_extract(const cv::Mat &mask, Blob &blob, uchar* pixel, uchar* start) 
     }
     else blob.to_perim(p);
     
+}
+
+cv::Mat median_subtract(const cv::Mat &image) {
+    cv::Mat out(image.rows, image.cols, image.type());
+    const size_t nb = image.channels();
+    
+    for (int b = 0; b < nb; b ++) {
+        cv::Mat channel(image.rows, image.cols, CV_8UC1);
+        cv::extractChannel(image, channel, b);
+        Chunk chunk = gaussian_estimate(channel.ptr(0, 0), channel.cols, Extent { 0, channel.cols, 0, channel.rows });
+
+        uchar* pixel = out.ptr(0, 0) + b;
+        for (size_t rc = 0; rc < channel.total(); rc ++, pixel += nb) {
+            *pixel = channel.data[rc] > chunk.median ? channel.data[rc] - chunk.median : 0;
+        }
+    }
+    return out;
 }

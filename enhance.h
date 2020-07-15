@@ -65,7 +65,7 @@ extern int max_features;
 extern double good_match_percent;
 extern double separation_adjustment;
 
-const int max_threads = std::thread::hardware_concurrency();
+const int max_threads = std::thread::hardware_concurrency() - 1;
 
 const double Pi = 3.14159265358979323846264;
 
@@ -73,6 +73,10 @@ namespace po = boost::program_options;
 namespace fs = std::experimental::filesystem;
 
 enum class findBy {gaussian, brightness};
+
+// TODO refactor to improve readin scheme - read images only as they 
+// are needed instead of reading all input images in at the beginning 
+// and then performing the operations
 
 // File IO
 //    Images
@@ -85,8 +89,6 @@ std::vector<cv::Mat3b> extract_frames(std::vector<std::string> files);          
 std::vector<cv::Mat3b> read_video(std::vector<std::string> videos);              // Extract the frames from a video using FFMPEG library
 
 // Main methods
-void subtract(const std::vector<std::string> files, 
-              const std::string &_darkframe, const double &factor = 1.0);
 cv::Mat4b advanced_coadd(const std::vector<cv::Mat3b> images,                    // Selective coadd ignoring pixels with brightness 
                                  double threshold = 0.3);                        // below {max_intensity}*{threshold}
 cv::Mat3b star_trail(const std::vector<cv::Mat3b> images);                       // Find star trails from {images} and return a composite with

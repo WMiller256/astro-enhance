@@ -181,16 +181,20 @@ cv::Mat gaussian_find(const cv::Mat3b &_image, long w, size_t z) {
 }
 Chunk gaussian_estimate(const uchar* pixel, const size_t &cols, const Extent &e) {
 // Get the mean and variance of a region of interest (ROI) determined by the bandwidth in [gaussian_find]
-
     Chunk chunk;
     chunk.n = (e.l + e.r) * (e.b + e.t);
-    // Find the mean of the region of interest (ROI)
+
+    // Find the mean and median brightness of the region of interest (ROI)
+    std::vector<double> pixels(chunk.n);
+    size_t idx = 0;
     for (long _r = -e.b; _r < e.t; _r++) {
         for (long _c = -e.l; _c < e.r; _c++) { 
             chunk.mean += *(pixel + _c + _r * cols);
+            pixels[idx++] = *(pixel + _c + _r * cols);
         }
     }
     chunk.mean /= chunk.n;
+    chunk.median = median(pixels);
 
     // Find the standard deviation of the region of interest (ROI)
     for (long _r = -e.b; _r < e.t; _r++) {
