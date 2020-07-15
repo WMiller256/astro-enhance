@@ -30,9 +30,9 @@ void print_percent(int current, int total) {
 
 	std::string p = std::to_string(int(percent));
 	std::cout << backspace+"\033[38;2;"+std::to_string(r[idx])+";"+std::to_string(g[idx])+";"+std::to_string(b[idx])+"m"+
-	             std::string(3 - p.length(), '0')+p+"%"+bright+white << std::flush;
+	             std::string(3 - p.length(), '0')+p+"%"+res << std::flush;
 	if (percent == 100) {
-		std::cout << bright+white+"\n" << std::flush;
+		std::cout << res+"\n" << std::flush;
 	}
 }
 

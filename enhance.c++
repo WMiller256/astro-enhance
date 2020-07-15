@@ -47,7 +47,7 @@ cv::Mat3b star_trail(const std::vector<cv::Mat3b> images) {
     std::cout << "Finding star trails..." << std::endl;
     for (size_t img = 0; img < images.size(); ++img) {                 // Loop through every image in the vector {images}
         images[img].convertTo(color_mat, CV_64FC3);
-        cv::Mat3b stars = brightness_find(color_mat, max_intensity);
+        cv::Mat3b stars = brightness_find_legacy(color_mat, max_intensity);
 
         // Once the stars have been found, combine the star masks
         cv::Vec3b* star = stars.ptr<cv::Vec3b>(0, 0);
@@ -62,7 +62,31 @@ cv::Mat3b star_trail(const std::vector<cv::Mat3b> images) {
     return m;
 }
 
-cv::Mat3b brightness_find(const cv::Mat3b &image, uchar max_intensity, 
+cv::Mat brightness_find(const cv::Mat &_image, const size_t z) {
+    // First convert image to grayscale and set up binary output
+    cv::Mat image(_image.rows, _image.cols, CV_8UC1);
+    cvtColor(_image, image, cv::COLOR_BGR2GRAY);
+    cv::Mat starmask = cv::Mat::zeros(_image.rows, _image.cols, CV_8UC1);
+    
+    // Retrieve statistical information from entire image
+    std::cout << "Retrieving image-wide statistics... " << std::flush;
+    Chunk chunk = gaussian_estimate(image.ptr(0, 0), image.cols, Extent { 0, image.cols, 0, image.rows });
+    std::cout << bright+green+"done"+res+"." << std::endl;
+
+    // Iterate over the image using pointer arithmetic
+    uchar* ipixel = image.ptr(0, 0);
+    uchar* opixel = starmask.ptr(0, 0);
+    std::cout << "Extracting stars based on mean of " << std::fixed << std::setprecision(2) << chunk.mean << ", standard deviation of " << std::setprecision(2) << chunk.std;
+    std::cout << ", and z-score threshold of " << z << "... " << std::flush;
+    for (size_t rc = 0; rc < image.cols * image.rows; rc ++, ipixel ++, opixel ++) {
+        if (*ipixel - chunk.mean > z * chunk.std) *opixel = 255;
+    }
+    std::cout << bright+green+"done"+res+"." << std::endl;
+
+    return starmask;
+}
+
+cv::Mat3b brightness_find_legacy(const cv::Mat3b &image, uchar max_intensity, 
                             int nn, double star_threshold) {                     // Find stars in the given image and return a mask of stars
     cv::Mat3b out = cv::Mat::zeros(image.rows, image.cols, CV_64FC3);            // Initialize output object of type CV_64FC3
 
@@ -179,11 +203,11 @@ Chunk gaussian_estimate(const uchar* pixel, const size_t &cols, const Extent &e)
     return chunk;
 }
 
-cv::Mat depollute(cv::Mat &image, const size_t size, const findBy find) {
+cv::Mat depollute(cv::Mat &image, const size_t size, const size_t z, const findBy find) {
 
     cv::Mat stars;
-    if (find == findBy::gaussian) stars = gaussian_find(image, size, 3);
-    else if (find == findBy::brightness) stars = brightness_find(image, find_max({image}), 0, 0.4);
+    if (find == findBy::gaussian) stars = gaussian_find(image, size, z);
+    else if (find == findBy::brightness) stars = brightness_find(image, z);
     cv::imwrite("starmask.tif", stars);
 
     std::cout << "Modeling and removing light pollution and sky glow... " << std::endl;
@@ -200,7 +224,7 @@ cv::Mat depollute(cv::Mat &image, const size_t size, const findBy find) {
     if (image.rows % size != 1) print_percent(image.rows - 1, image.rows);
 
     // Return the model as an image
-    std::cout << "Creating reference image of modelled values... " << std::endl;
+    std::cout << "Creating reference image of modeled values... " << std::endl;
     cv::Mat model(image.rows, image.cols, image.type());
     for (long r = 0; r < image.rows; r ++) {
         print_percent(r, image.rows);

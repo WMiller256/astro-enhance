@@ -59,6 +59,9 @@ STACKER    = $(BUILD)/stacker.o          \
 COADD      = $(BUILD)/coadd.o            \
              $(OBJS)
 
+DEPOLLUTE  = $(BUILD)/depollute.o        \
+             $(OBJS)
+
 SUBTRACT   = $(BUILD)/subtract.o         \
              $(OBJS)
 
@@ -90,6 +93,11 @@ advanced_coadd: $(ADV_COADD)
 coadd: $(COADD)
 	@printf "[$(CYAN)Linking $(WHITE)]   $(BRIGHT)$(MAIN)$(WHITE) - $(MAGENTA)Binary$(WHITE)\n"
 	cd $(ABS); $(CC) $(COADD) $(LIBDIRS) -o $(BIN)/$@ $(LIBS)
+	@printf "[$(GREEN) Linked $(WHITE)]   $(BRIGHT)$(MAIN)$(WHITE) - $(MAGENTA)Binary$(WHITE)\n"
+
+depollute: $(DEPOLLUTE)
+	@printf "[$(CYAN)Linking $(WHITE)]   $(BRIGHT)$(MAIN)$(WHITE) - $(MAGENTA)Binary$(WHITE)\n"
+	cd $(ABS); $(CC) $(DEPOLLUTE) $(LIBDIRS) -o $(BIN)/$@ $(LIBS)
 	@printf "[$(GREEN) Linked $(WHITE)]   $(BRIGHT)$(MAIN)$(WHITE) - $(MAGENTA)Binary$(WHITE)\n"
 
 subtract: $(SUBTRACT)

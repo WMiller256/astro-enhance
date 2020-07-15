@@ -91,13 +91,14 @@ cv::Mat4b advanced_coadd(const std::vector<cv::Mat3b> images,                   
                                  double threshold = 0.3);                        // below {max_intensity}*{threshold}
 cv::Mat3b star_trail(const std::vector<cv::Mat3b> images);                       // Find star trails from {images} and return a composite with
 cv::Mat depollute(cv::Mat &images, const size_t size = 50, 
-                  const findBy find = findBy::gaussian);
+                  const size_t z=8, const findBy find = findBy::gaussian);
                                                                                  // star trails stacked on coadded image
 
 // Star position retrieval etc
-cv::Mat3b brightness_find(const cv::Mat3b &image, uchar max_intensisty,          // Finds stars in {image} based on relative brightness, 
-                     int nn = 0, double star_threshold = 0.995);                 // returning a [Mat3b] mask of stars 
-cv::Mat gaussian_find(const cv::Mat3b &_image, long w, size_t z=12);             // Find stars by 2D Gaussian fitting
+cv::Mat brightness_find(const cv::Mat &_image, const size_t z=8);
+cv::Mat3b brightness_find_legacy(const cv::Mat3b &image, uchar max_intensisty,   // Finds stars in {image} based on relative brightness, 
+                     int nn = 0, double star_threshold = 0.995);                 // returning a [Mat3b] mask of stars |LEGACY|
+cv::Mat gaussian_find(const cv::Mat3b &_image, long w, size_t z=8);              // Find stars by 2D Gaussian fitting
 Chunk gaussian_estimate(const uchar* pixel, const size_t &cols, const Extent &e);
 std::vector<std::pair<double, double>> star_positions(const cv::Mat3b &image, 
                                                       const size_t &n = 100);

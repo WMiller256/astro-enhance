@@ -26,5 +26,5 @@ int main(int argn, char** argv) {
 	cv::Mat3b output = advanced_coadd(images, 0.2);
 	std::cout << "Writing output..." << std::flush;
 	cv::imwrite("./coadded.tif", output);
-	std::cout << green+"done"+res+white << std::endl;	
+	std::cout << green+"done"+res << std::endl;	
 }

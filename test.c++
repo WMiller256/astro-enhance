@@ -8,7 +8,7 @@ int main(int argn, char** argv) {
 
 	cv::Mat3b anchor = read_image(_anchor);
 //	cv::Mat3b compar = read_image(_compar);
-	cv::Mat result = depollute(anchor, 10, findBy::brightness);
+	cv::Mat result = depollute(anchor, 10, 5, findBy::brightness);
 	cv::imwrite("test.tif", anchor);
 	cv::imwrite("model.tif", result);
 //	align_stars(anchor, compar, result);

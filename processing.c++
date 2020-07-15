@@ -88,7 +88,7 @@ cv::Mat3b coadd(const std::vector<cv::Mat3b> &images) {
     // inefficient (discards threading advantages).
     for (auto e : m) out += e;                        // Accumulate the arrays from the threads into a single array
     m[0].convertTo(out, CV_8U, 1. / images.size()); // Convert back to CV_8UC3 type, applying the division to get the actual mean
-    std::cout << green+"done"+res+white+"." << std::endl;
+    std::cout << bright+green+"done"+res+"." << std::endl;
     
     return out;
 }
@@ -270,7 +270,7 @@ cv::Mat4b advanced_coadd(const std::vector<cv::Mat3b> images, double threshold) 
     cv::Mat4b output(m.rows, m.cols, CV_32FC4);
 //    cv::cvtColor(m, output, cv::COLOR_BGRA2BGR);
     m.convertTo(output, CV_8U, 1. / modified.size());
-    std::cout << green+"done."+res+white << std::endl;
+    std::cout << bright+green+"done."+res << std::endl;
     return output;
 }
 
@@ -288,8 +288,8 @@ void align_stars(cv::Mat &anc, cv::Mat &com, cv::Mat &result) {
     const size_t iters = 4;
 
     // Extract a mask of only the brightest stars (within 0.5% of max brightness)
-    const cv::Mat3b anc_stars = brightness_find(anc, find_max({anc}), 2);
-    const cv::Mat3b com_stars = brightness_find(com, find_max({com}), 2);
+    const cv::Mat3b anc_stars = brightness_find_legacy(anc, find_max({anc}), 2);
+    const cv::Mat3b com_stars = brightness_find_legacy(com, find_max({com}), 2);
 
     // Convert star masks into vector of positions
     const std::vector<std::pair<double, double>> anc_pos = star_positions(anc_stars, 100);
