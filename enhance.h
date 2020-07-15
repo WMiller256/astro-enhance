@@ -42,6 +42,10 @@ extern "C" {
 // Boost
 #include <boost/program_options.hpp>
 
+// Eigen
+#include <Eigen/Dense>
+
+
 class Blob; // Forward declared for use in processing.h
 
 // enhance
@@ -68,6 +72,8 @@ const double Pi = 3.14159265358979323846264;
 namespace po = boost::program_options;
 namespace fs = std::experimental::filesystem;
 
+enum class findBy {gaussian, brightness};
+
 // File IO
 //    Images
 cv::Mat3b read_image(std::string file);                                          // Read the single image specified by {file}
@@ -84,6 +90,8 @@ void subtract(const std::vector<std::string> files,
 cv::Mat4b advanced_coadd(const std::vector<cv::Mat3b> images,                    // Selective coadd ignoring pixels with brightness 
                                  double threshold = 0.3);                        // below {max_intensity}*{threshold}
 cv::Mat3b star_trail(const std::vector<cv::Mat3b> images);                       // Find star trails from {images} and return a composite with
+cv::Mat depollute(cv::Mat &images, const size_t size = 50, 
+                  const findBy find = findBy::gaussian);
                                                                                  // star trails stacked on coadded image
 
 // Star position retrieval etc
@@ -93,6 +101,9 @@ cv::Mat gaussian_find(const cv::Mat3b &_image, long w, size_t z=12);            
 Chunk gaussian_estimate(const uchar* pixel, const size_t &cols, const Extent &e);
 std::vector<std::pair<double, double>> star_positions(const cv::Mat3b &image, 
                                                       const size_t &n = 100);
+
+Eigen::MatrixXd depollute_region(cv::Mat &image, const cv::Mat &stars, const long &r, 
+                                 const long &c, const int &b, const size_t &size);
 
 // Intensity assessment
 uchar find_max(std::vector<cv::Mat3b> images);                                   // Find the brightest pixel in {images}

@@ -6,7 +6,7 @@ BIN      = ~/bin
 BUILD    = ./build
 RM       = /bin/rm -f
 MV       = /bin/mv -f
-CFLAGS   = -isystem /usr/local/include/opencv4/ -I /usr/lib/boost -Wno-deprecated-declarations -g -std=c++17 -rdynamic \
+CFLAGS   = -isystem /usr/local/include/opencv4/ -I /usr/local/include/eigen3/ -I /usr/lib/boost -Wno-deprecated-declarations -g -std=c++17 -rdynamic \
            -pthread -O3 -fopenmp
 CC       = /usr/bin/c++ $(CFLAGS)
 

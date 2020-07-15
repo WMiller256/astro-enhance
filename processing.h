@@ -9,8 +9,6 @@
 
 #pragma once
 
-#include <atomic>
-
 #include "enhance.h"
 
 void accumulate(const std::vector<cv::Mat> images, cv::Mat &m, const size_t &n);

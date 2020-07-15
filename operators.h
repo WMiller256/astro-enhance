@@ -26,6 +26,4 @@ std::vector<std::pair<double, double>> operator-(const std::vector<std::pair<dou
 // Not technically operators but definitely belong here
 double fetch_add(std::atomic<double>* shared, const double &h);
 double diff(const std::vector<std::pair<double, double>> &l, const std::vector<std::pair<double, double>> &r);
-
-// This assumes T is a primitive, it will fail otherwise
 double distance(const std::pair<double, double> &l, const std::pair<double, double> &r);

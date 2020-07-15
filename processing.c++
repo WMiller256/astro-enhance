@@ -104,6 +104,7 @@ cv::Mat3b median(const std::vector<cv::Mat3b> &images) {
     size_t tidx = 1;
 
     // Initialize the threads and pass appropriate arguments to each one
+    std::cout << "Computing medians..." << std::endl;
     std::vector<std::thread> threads(nthreads);
     for (long ii = 0; ii < nthreads - 1; ii ++, offset += block) {
         threads[ii] = std::thread(_median, tidx++, images, std::ref(_result), offset, (offset + block) * 3);
@@ -134,7 +135,7 @@ void _median(const int tidx, const std::vector<cv::Mat3b> &images, std::vector<c
     for (size_t ii = 0; ii < n; ii ++) img_ptrs[ii] = (uchar*)images[ii].ptr(0, 0);
 
     size_t im;
-    size_t total = output[0].rows * output[0].cols;
+    size_t total = images[0].rows * images[0].cols;
     for (offset; offset < end; offset += 3) {
         print_percent(progress++, total);
         for (size_t c = 0; c < 3; c ++, im = 0) {

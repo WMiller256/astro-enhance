@@ -179,6 +179,89 @@ Chunk gaussian_estimate(const uchar* pixel, const size_t &cols, const Extent &e)
     return chunk;
 }
 
+cv::Mat depollute(cv::Mat &image, const size_t size, const findBy find) {
+
+    cv::Mat stars;
+    if (find == findBy::gaussian) stars = gaussian_find(image, size, 3);
+    else if (find == findBy::brightness) stars = brightness_find(image, find_max({image}), 0, 0.4);
+    cv::imwrite("starmask.tif", stars);
+
+    std::cout << "Modeling and removing light pollution and sky glow... " << std::endl;
+    const int nbands = image.channels();
+    std::valarray<Eigen::MatrixXd> _model(Eigen::MatrixXd::Zero(image.rows, image.cols), 3);
+    for (long r = 0; r < image.rows; r += size) {
+        print_percent(r, image.rows);
+        for (long c = 0; c < image.cols; c += size) {
+            for (int b = 0; b < nbands; b ++) {
+                _model[b].block(r, c, size, size) = depollute_region(image, stars, r, c, b, size);
+            }
+        }
+    }
+    if (image.rows % size != 1) print_percent(image.rows - 1, image.rows);
+
+    // Return the model as an image
+    std::cout << "Creating reference image of modelled values... " << std::endl;
+    cv::Mat model(image.rows, image.cols, image.type());
+    for (long r = 0; r < image.rows; r ++) {
+        print_percent(r, image.rows);
+        for (long c = 0; c < image.cols; c ++) {
+            for (int b = 0; b < image.channels(); b ++) {
+                *(model.ptr(r, c) + b) = _model[b](r, c);
+            }
+        }
+    }
+    
+    return model;
+}
+Eigen::MatrixXd depollute_region(cv::Mat &image, const cv::Mat &stars, const long &r, const long &c, const int &b, const size_t &size) {
+
+    // Avoid overflowing the image bounds by downscaling row and column sizes as needed 
+    const size_t c_size = c + size < image.cols ? size : image.cols - c;
+    const size_t r_size = r + size < image.rows ? size : image.rows - r;
+
+    Eigen::MatrixXd W = Eigen::MatrixXd::Zero(c_size*r_size, c_size*r_size);
+    
+    Eigen::MatrixXd X = Eigen::MatrixXd::Constant(c_size*r_size, 3, 1);
+    Eigen::MatrixXd Y(c_size*r_size, 1);
+
+    // Populate the weighted least squared components
+    size_t idx = 0;
+    for (long ii = 0; ii < r_size; ii ++) {
+        for (long jj = 0; jj < c_size; jj ++, idx ++) {
+            if ((int)*(stars.ptr(ii + r, jj + c) + b)) continue;
+            W(idx, idx) = 1.0 / (c_size * r_size);
+            X(idx, 0) = jj;
+            X(idx, 1) = ii;
+            Y(idx) = (int)*(image.ptr(ii + r, jj + c) + b);
+        }
+    }
+
+    // Calculate and apply the coefficient matrix to retrieve the predicted pixel values
+    Eigen::MatrixXd _XB = X * ((X.transpose() * W * X).inverse() * (X.transpose() * W * Y));
+    Eigen::MatrixXd XB(r_size * c_size, 1);
+
+    // Subtract off the modeled light pollution/sky glow
+    idx = 0;
+    uchar* pixel = image.ptr(0, 0);
+    for (long ii = 0; ii < r_size; ii ++) {
+        for (long jj = 0; jj < c_size; jj ++, idx ++) {
+            pixel = image.ptr(ii + r, jj + c) + b;
+            
+            if ((int)*(stars.ptr(ii + r, jj + c) + b)) {
+                XB(idx) = 0;
+            }
+            else {
+                XB(idx) = _XB(idx);
+                
+                if (XB(idx) < *pixel) *pixel -= XB(idx);
+                else *pixel = 0;
+            }
+        }
+    }
+
+    return Eigen::Map<Eigen::MatrixXd>(XB.data(), r_size, c_size).transpose();
+}
+
 std::vector<std::pair<double, double>> star_positions(const cv::Mat3b &starmask, const size_t &n) {
     std::vector<std::pair<double, double>> positions;
     std::vector<std::vector<cv::Point>> contours;
