@@ -181,16 +181,16 @@ cv::Mat gaussian_find(const cv::Mat3b &_image, long w, size_t z) {
 }
 Chunk gaussian_estimate(const uchar* pixel, const size_t &cols, const Extent &e) {
 // Get the mean and variance of a region of interest (ROI) determined by the bandwidth in [gaussian_find]
-    Chunk chunk;
-    chunk.n = (e.l + e.r) * (e.b + e.t);
+    Chunk chunk(e);
 
     // Find the mean and median brightness of the region of interest (ROI)
-    std::vector<double> pixels(chunk.n);
-    size_t idx = 0;
+    std::vector<double> pixels;
     for (long _r = -e.b; _r < e.t; _r++) {
         for (long _c = -e.l; _c < e.r; _c++) { 
             chunk.mean += *(pixel + _c + _r * cols);
-            pixels[idx++] = *(pixel + _c + _r * cols);
+            chunk.n ++; // Accumulate instead of calculating because center-defined Extents would have off-by-one otherwise
+            
+            pixels.push_back((double)*(pixel + _c + _r * cols));
         }
     }
     chunk.mean /= chunk.n;
@@ -207,11 +207,11 @@ Chunk gaussian_estimate(const uchar* pixel, const size_t &cols, const Extent &e)
     return chunk;
 }
 
-cv::Mat depollute(cv::Mat &image, const size_t size, const size_t z, const findBy find) {
+cv::Mat depollute(cv::Mat &image, const size_t size, const size_t z, const FindBy find) {
 
     cv::Mat stars;
-    if (find == findBy::gaussian) stars = gaussian_find(image, size, z);
-    else if (find == findBy::brightness) stars = brightness_find(image, z);
+    if (find == FindBy::gaussian) stars = gaussian_find(image, size, z);
+    else if (find == FindBy::brightness) stars = brightness_find(image, z);
     cv::imwrite("starmask.tif", stars);
 
     std::cout << "Modeling and removing light pollution and sky glow... " << std::endl;

@@ -26,13 +26,18 @@ bool operator==(const Pos &l, const Pos &r) { return (l.x == r.x && l.y == r.y);
 Chunk::Chunk() {
 	reset();
 }
+Chunk::Chunk(const Extent &e) {
+    reset();
+    ext = e;
+}
 void Chunk::reset() {
 	n = 0;
-	pos.x = 0;
-	pos.y = 0;
 	mean = 0;
 	std = 0;
 	var = 0;
+
+	pos = Pos {0, 0};
+	ext = Extent {0, 0, 0, 0};
 }
 
 Chunk Chunk::operator+(const Chunk& r) const {

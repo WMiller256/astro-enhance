@@ -72,7 +72,7 @@ const double Pi = 3.14159265358979323846264;
 namespace po = boost::program_options;
 namespace fs = std::experimental::filesystem;
 
-enum class findBy {gaussian, brightness};
+enum class FindBy {gaussian, brightness};
 
 // TODO refactor to improve readin scheme - read images only as they 
 // are needed instead of reading all input images in at the beginning 
@@ -93,7 +93,7 @@ cv::Mat4b advanced_coadd(const std::vector<cv::Mat3b> images,                   
                                  double threshold = 0.3);                        // below {max_intensity}*{threshold}
 cv::Mat3b star_trail(const std::vector<cv::Mat3b> images);                       // Find star trails from {images} and return a composite with
 cv::Mat depollute(cv::Mat &images, const size_t size = 50, 
-                  const size_t z=8, const findBy find = findBy::gaussian);
+                  const size_t z=8, const FindBy find = FindBy::gaussian);
                                                                                  // star trails stacked on coadded image
 
 // Star position retrieval etc

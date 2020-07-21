@@ -1,5 +1,5 @@
 /*
- * median_subtract.c++
+ * median_filter.c++
  *
  * William Miller
  * Jul 15, 2020
@@ -16,12 +16,20 @@
 int main(int argn, char** argv) {
     std::cout << res;
     std::vector<std::string> files;
+    std::string mode;
+    size_t kernel;
+    long smoothing;
 
    	po::options_description description("Allowed Options");
 
 	try {
 		description.add_options()
 			("images,i", po::value<std::vector<std::string> >()->multitoken(), "The images on which to perform the subtraction.")
+			("mode,m", po::value<std::string>(&mode)->default_value("global"), "The filtering mode to apply: global, local, row, or column.")
+			("kernel,k", po::value<size_t>(&kernel)->default_value(10), "The kernel to use when filtering, i.e. the size of the region to sample"
+			                                                          " for each iteration of the filter. Does not apply to filtering mode 'global'")
+			("smoothing,s", po::value<long>(&smoothing)->default_value(0), "The smoothing factor for row and column based filtering. (The size"
+			                                                               " of the rolling average to use)")
 		;
 	}
 	catch (...) {
@@ -44,14 +52,20 @@ int main(int argn, char** argv) {
 		std::cout << "Error - must specify input images." << std::endl;
 		exit(2);
 	}
+	FilterMode fmode;
+	if (mode == "global") fmode = FilterMode::global;
+	else if (mode == "row") fmode = FilterMode::row;
+	else if (mode == "col") fmode = FilterMode::col;
+	else if (mode == "rowcol") fmode = FilterMode::rowcol;
+	else if (mode == "colrow") fmode = FilterMode::colrow;
 
     std::vector<cv::Mat3b> images = read_images(files);
 
-    std::cout << "Performing per-channel global median subtraction... " << std::endl;
+    std::cout << "Performing " << mode << " median filtering... " << std::endl;
     std::atomic<int> progress(0);
     #pragma omp parallel for schedule(dynamic)
 	for (int ii = 0; ii < images.size(); ii ++) {
-        cv::Mat3b subtracted = median_subtract(images[ii]);
+        cv::Mat3b subtracted = median_filter(images[ii], fmode, kernel, smoothing);
 
         fs::path path(files[ii]);
         cv::imwrite(path.replace_filename(path.stem().string()+"_msub"+path.extension().string()), subtracted);

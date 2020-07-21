@@ -33,19 +33,22 @@ struct Extent {
 	long l, r, b, t;
 };
 
-class Chunk;
 class Chunk {
 public:
 	Chunk();
+	Chunk(const Extent &e);
 
 	void reset();
 
 	size_t n = 0;
-	Pos pos = {0, 0};
+
 	double mean = 0;
 	double median = 0;
 	double std = 0;
 	double var = 0;
+
+	Pos pos = {0, 0};
+    Extent ext;
 
 	Chunk operator+(const Chunk& r) const;
 	Chunk& operator+=(const Chunk& r);

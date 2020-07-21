@@ -10,6 +10,9 @@
 #pragma once
 
 #include "enhance.h"
+#include "chunk.h"
+
+enum class FilterMode {global, row, col, rowcol, colrow};
 
 void accumulate(const std::vector<cv::Mat> images, cv::Mat &m, const size_t &n);
 void subtract(const std::vector<std::string> files, 
@@ -33,4 +36,6 @@ void interpolate_simple(cv::Mat3b &im, const cv::Mat &starmask);
 std::vector<Blob> blob_extract(const cv::Mat &im);
 void _blob_extract(const cv::Mat &mask, Blob &blob, uchar* pixel, uchar* start);
 
-cv::Mat median_subtract(const cv::Mat &image);
+cv::Mat median_filter(const cv::Mat &image, const FilterMode mode = FilterMode::global, const size_t kernel = 10, const long smoothing = 0);
+void normalize(cv::Mat &image, const double &c);
+void smooth_median(std::vector<Chunk> &chunks, const long smoothing);

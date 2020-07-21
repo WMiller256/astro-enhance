@@ -449,19 +449,111 @@ void _blob_extract(const cv::Mat &mask, Blob &blob, uchar* pixel, uchar* start) 
     
 }
 
-cv::Mat median_subtract(const cv::Mat &image) {
+cv::Mat median_filter(const cv::Mat &image, const FilterMode mode, const size_t kernel, const long smoothing) {
     cv::Mat out(image.rows, image.cols, image.type());
     const size_t nb = image.channels();
-    
-    for (int b = 0; b < nb; b ++) {
-        cv::Mat channel(image.rows, image.cols, CV_8UC1);
-        cv::extractChannel(image, channel, b);
-        Chunk chunk = gaussian_estimate(channel.ptr(0, 0), channel.cols, Extent { 0, channel.cols, 0, channel.rows });
 
-        uchar* pixel = out.ptr(0, 0) + b;
-        for (size_t rc = 0; rc < channel.total(); rc ++, pixel += nb) {
-            *pixel = channel.data[rc] > chunk.median ? channel.data[rc] - chunk.median : 0;
+    if (mode == FilterMode::global) {
+        for (int b = 0; b < nb; b ++) {
+            cv::Mat channel(image.rows, image.cols, CV_8UC1);
+            cv::extractChannel(image, channel, b);
+            Chunk chunk = gaussian_estimate(channel.ptr(0, 0), channel.cols, Extent { 0, channel.cols, 0, channel.rows });
+
+            uchar* pixel = out.ptr(0, 0) + b;
+            for (size_t rc = 0; rc < channel.total(); rc ++, pixel += nb) {
+                *pixel = channel.data[rc] > chunk.median ? channel.data[rc] - chunk.median : 0;
+            }
         }
     }
+    else if (mode == FilterMode::row) {
+        uchar* pixel;
+        cv::Mat channel(image.rows, image.cols, CV_8UC1);
+        for (int b = 0; b < nb; b ++) {
+            cv::extractChannel(image, channel, b);
+            std::vector<Chunk> chunks;
+
+            for (long r = 0; r < channel.rows; r += kernel) {
+                chunks.push_back(gaussian_estimate(channel.ptr(r, 0), channel.cols, Extent { 0, channel.cols, 0, (kernel + r < channel.rows ? (long)kernel : channel.rows - r) }));
+            }
+            smooth_median(chunks, smoothing);
+
+            for (long r = 0, ii = 0; r < channel.rows; r += kernel, ii ++) {
+                pixel = out.ptr(r, 0) + b;
+                for (size_t rc = r * channel.cols; rc < channel.cols * (kernel + r) && rc < channel.total(); rc ++, pixel += nb) {
+                    *pixel = channel.data[rc] > chunks[ii].median ? channel.data[rc] - chunks[ii].median : 0;
+                }
+            }
+        }
+    }
+    else if (mode == FilterMode::col) {
+        Chunk chunk;
+        cv::Mat channel(image.rows, image.cols, CV_8UC1);
+        for (int b = 0; b < nb; b ++) {
+            cv::extractChannel(image, channel, b);
+            std::vector<Chunk> chunks;
+            
+            for (long c = 0; c < channel.cols; c += kernel) {
+                chunks.push_back(gaussian_estimate(channel.ptr(0, c), channel.cols, Extent { 0, (kernel + c < channel.cols ? (long)kernel : channel.cols - c), 0, channel.rows }));
+            }    
+            smooth_median(chunks, smoothing);
+
+            for (long c = 0, ii = 0; c < channel.cols; c += kernel, ii ++) {
+                for (size_t _r = 0; _r < channel.rows; _r ++) {
+                    for (size_t _c = c; _c < c + kernel; _c ++) { 
+                        *(out.ptr(_r, _c) + b) = channel.data[_r * channel.cols + _c] > chunks[ii].median ? channel.data[_r * channel.cols + _c] - chunks[ii].median : 0;
+                    }
+                }
+            }
+        }
+    }
+    else if (mode == FilterMode::rowcol) {
+        out = median_filter(image, FilterMode::row, kernel);
+        normalize(out, 0.75);
+        out = median_filter(out, FilterMode::col, kernel);
+    }
+    else if (mode == FilterMode::colrow) {
+        out = median_filter(image, FilterMode::col, kernel);
+        normalize(out, 0.75);
+        out = median_filter(out, FilterMode::row, kernel);
+    }
+    
     return out;
+}
+
+void normalize(cv::Mat &image, const double &c) {
+    double min, max;
+    double tot;
+    for (int b = 0; b < image.channels(); b ++) {
+        cv::Mat channel(image.rows, image.cols, CV_8UC1);
+        cv::extractChannel(image, channel, b);
+        cv::minMaxLoc(channel, &min, &max);
+        tot += max;
+    }
+    tot /= 3.0;
+    double f = (c * 255) / tot;
+
+    uchar* pixel = image.ptr(0, 0);
+    for (size_t rcb = 0; rcb < image.total() * image.channels(); rcb ++, pixel ++) {
+        *pixel *= f;
+    }
+}
+void smooth_median(std::vector<Chunk> &chunks, const long smoothing) {
+    if (chunks.empty() || smoothing == 0) return; 
+    std::vector<Chunk> out(chunks.size());
+
+    // Smooth medians of chunk vector based on rolling average of 2 * {smoothing} + 1    
+    size_t n = 0;
+    long sum = 0;
+    for (long c = 0; c < chunks.size(); c ++) {
+        sum = 0;
+        n = 0;
+        for (long s = c - smoothing; s < c + smoothing; s ++) {
+            if (s > 0 && s < chunks.size()) {
+                sum += chunks[s].median;
+                n ++;
+            }
+        }
+        out[c].median = sum / n;
+    }
+    chunks = out;
 }
