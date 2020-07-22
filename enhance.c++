@@ -1,26 +1,26 @@
 #include "enhance.h"
 
-cv::Mat3b read_image(std::string file) {              // Read the image file specified by {file}
+cv::Mat read_image(std::string file) {              // Read the image file specified by {file}
     if (!fs::exists(fs::path(file))) {                // If the file does not exist simply exit with uninitialized return
         std::cout << "Error - file "+file+" does not exist or other file error." << std::endl;
-        return cv::Mat3b();    
+        return cv::Mat();    
     }
 
-    cv::Mat3b image = cv::imread(file, cv::IMREAD_COLOR);
+    cv::Mat image = cv::imread(file, cv::IMREAD_ANYDEPTH);
     return image;
 }
 
-std::vector<cv::Mat3b> read_images(std::vector<std::string> files) { // Read the image files in the string vector {files}
+std::vector<cv::Mat> read_images(std::vector<std::string> files) { // Read the image files in the string vector {files}
     std::mutex mtx;                                                  // Create a mutex for pushing images onto {images}
-    if (files.empty()) return std::vector<cv::Mat3b>();              // To avoid segmentation fault in case of empty filelist, 
-                                                                     // return default-constructed vector of [cv::Mat3b] objects
-    std::vector<cv::Mat3b> images;                                   // Initialize new vector of [cv::Mat3b] objects
+    if (files.empty()) return std::vector<cv::Mat>();              // To avoid segmentation fault in case of empty filelist, 
+                                                                     // return default-constructed vector of [cv::Mat] objects
+    std::vector<cv::Mat> images;                                   // Initialize new vector of [cv::Mat] objects
     std::cout << "Reading files..." << std::endl;
     int count = 0;
 #pragma omp parallel for schedule(dynamic)
     for (int ii = 0; ii < files.size(); ++ii) {                      // Then for every file in the list
-        cv::Mat3b image;                                             // create a new temporary [cv::Mat3b] object,
-        image = cv::imread(files[ii], cv::IMREAD_COLOR);             // read the {ii}th file from {files} into the temp 
+        cv::Mat image;                                             // create a new temporary [cv::Mat] object,
+        image = cv::imread(files[ii], cv::IMREAD_ANYDEPTH);          // read the {ii}th file from {files} into the temp 
         mtx.lock();
         if (!image.empty()) {                                        // object. If it is not empty
             images.push_back(image);                                 // Push it onto the images vector
@@ -31,15 +31,15 @@ std::vector<cv::Mat3b> read_images(std::vector<std::string> files) { // Read the
         print_percent(count++, files.size());
         mtx.unlock();
     }
-    return images;                                                   // Then return the [cv::Mat3b] vector of images
+    return images;                                                   // Then return the [cv::Mat] vector of images
 }
 
-cv::Mat3b star_trail(const std::vector<cv::Mat3b> images) {
-    if (images.empty()) return cv::Mat3b();                            // If the images list is empty, return an empty cv::Mat3b object
+cv::Mat star_trail(const std::vector<cv::Mat> images) {
+    if (images.empty()) return cv::Mat();                            // If the images list is empty, return an empty cv::Mat object
     int rows = images[0].rows;
     int cols = images[0].cols;
 
-    cv::Mat3b m(rows, cols, CV_64FC3);                                 // Create an image initialized to 0's to hold the location of stars
+    cv::Mat m(rows, cols, CV_64FC3);                                 // Create an image initialized to 0's to hold the location of stars
     m.setTo(cv::Scalar(0,0,0,0));
     cv::Mat color_mat;
     uchar max_intensity = find_max(images);
@@ -47,7 +47,7 @@ cv::Mat3b star_trail(const std::vector<cv::Mat3b> images) {
     std::cout << "Finding star trails..." << std::endl;
     for (size_t img = 0; img < images.size(); ++img) {                 // Loop through every image in the vector {images}
         images[img].convertTo(color_mat, CV_64FC3);
-        cv::Mat3b stars = brightness_find_legacy(color_mat, max_intensity);
+        cv::Mat stars = brightness_find_legacy(color_mat, max_intensity);
 
         // Once the stars have been found, combine the star masks
         cv::Vec3b* star = stars.ptr<cv::Vec3b>(0, 0);
@@ -86,9 +86,9 @@ cv::Mat brightness_find(const cv::Mat &_image, const size_t z) {
     return starmask;
 }
 
-cv::Mat3b brightness_find_legacy(const cv::Mat3b &image, uchar max_intensity, 
+cv::Mat brightness_find_legacy(const cv::Mat &image, uchar max_intensity, 
                             int nn, double star_threshold) {                     // Find stars in the given image and return a mask of stars
-    cv::Mat3b out = cv::Mat::zeros(image.rows, image.cols, CV_64FC3);            // Initialize output object of type CV_64FC3
+    cv::Mat out = cv::Mat::zeros(image.rows, image.cols, CV_64FC3);            // Initialize output object of type CV_64FC3
 
     cv::Vec3b* pixel = const_cast<cv::Vec3b*>(image.ptr<cv::Vec3b>(0, 0));
     for (size_t ii = 0; ii < out.rows; ii++) {                                   // Then loop through every pixel
@@ -110,7 +110,7 @@ cv::Mat3b brightness_find_legacy(const cv::Mat3b &image, uchar max_intensity,
     return out;                                                                  // Return a mask with stars isolated
 }
 
-cv::Mat gaussian_find(const cv::Mat3b &_image, long w, size_t z) {
+cv::Mat gaussian_find(const cv::Mat &_image, long w, size_t z) {
 /* 
    Extract a binary mask of stars from an image by using localized analysis of 
    mean and standard deviation to decide if a pixel is likely part of a star or not
@@ -290,7 +290,7 @@ Eigen::MatrixXd depollute_region(cv::Mat &image, const cv::Mat &stars, const lon
     return Eigen::Map<Eigen::MatrixXd>(XB.data(), r_size, c_size).transpose();
 }
 
-std::vector<std::pair<double, double>> star_positions(const cv::Mat3b &starmask, const size_t &n) {
+std::vector<std::pair<double, double>> star_positions(const cv::Mat &starmask, const size_t &n) {
     std::vector<std::pair<double, double>> positions;
     std::vector<std::vector<cv::Point>> contours;
 
@@ -323,7 +323,7 @@ int brightness(const cv::Vec3b& input) {                     // Find and return 
 
 bool brighter_than(cv::Vec4b pixel, double threshold) { return ((pixel[0] + pixel[1] + pixel[2]) / 3 > threshold); }
 
-uchar find_max(std::vector<cv::Mat3b> images) {
+uchar find_max(std::vector<cv::Mat> images) {
     if (images.empty()) return 0;
 
     if (images.size() > 1) std::cout << "Finding maximum intensity..." << std::endl;
@@ -343,21 +343,21 @@ uchar find_max(std::vector<cv::Mat3b> images) {
     return max_intensity;                                     // Then return the maximum brightness value
 }
     
-std::vector<cv::Mat3b> extract_frames(std::vector<std::string> files) {  // Extract all frames of given video files to a single
-                                                                         // vector of [cv::Mat3b] objects
-    if (files.empty()) return std::vector<cv::Mat3b>();                  // Guard against seg fault on empty list with return catch
+std::vector<cv::Mat> extract_frames(std::vector<std::string> files) {  // Extract all frames of given video files to a single
+                                                                         // vector of [cv::Mat] objects
+    if (files.empty()) return std::vector<cv::Mat>();                  // Guard against seg fault on empty list with return catch
     
-    std::vector<cv::Mat3b> frames;                                       // Initialize a new vector of [cv::Mat3b] objects
+    std::vector<cv::Mat> frames;                                       // Initialize a new vector of [cv::Mat] objects
     std::cout << "Extracting files..." << std::endl;
     frames = read_video(files);
-    return frames;                                                       // Return the [cv::Mat3b] vector {frames} when all files have been
+    return frames;                                                       // Return the [cv::Mat] vector {frames} when all files have been
 }                                                                        // read in.
 
-std::vector<cv::Mat3b> read_video(std::vector<std::string> videos) {
+std::vector<cv::Mat> read_video(std::vector<std::string> videos) {
     /* -    -    -    -    -    -    -    -    - 
        This works *most* of the time....
        -    -    -    -    -    -    -    -    - */
-    std::vector<cv::Mat3b> frames;
+    std::vector<cv::Mat> frames;
 
     AVFormatContext* informat_ctx = NULL;
     AVFrame* frame = NULL;
@@ -376,16 +376,16 @@ std::vector<cv::Mat3b> read_video(std::vector<std::string> videos) {
 
     for (int ii = 0; ii < videos.size(); ii++) {                        // For every file in the filelist {videos}, attempt to open
         if ((ret = avformat_open_input(&informat_ctx, videos[ii].c_str(), NULL, NULL)) < 0) {
-        	// If opening fails print error message and return default constructed `vector` of `cv::Mat3b`
+        	// If opening fails print error message and return default constructed `vector` of `cv::Mat`
             std::cout << red << "Could not open file " << yellow << videos[ii] << res << "." << std::endl;
-            return std::vector<cv::Mat3b>();
+            return std::vector<cv::Mat>();
         }
 
         // Read the meta data 
         ret = avformat_find_stream_info(informat_ctx, 0);
         if (ret < 0) {
             std::cout << red << "Failed to read input file information. " << res << std::endl;
-            return std::vector<cv::Mat3b>();
+            return std::vector<cv::Mat>();
         }
 
         in_codec = avcodec_find_encoder(AV_CODEC_ID_MPEG4);                // Determine the video codec from the file

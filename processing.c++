@@ -34,8 +34,8 @@ void accumulate(const std::vector<cv::Mat> images, cv::Mat &m, const size_t &n) 
 void subtract(const std::vector<std::string> files, const std::string &_darkframe, const double &factor) {
     size_t idx = 0;
     fs::path path;
-    std::vector<cv::Mat3b> images = read_images(files);
-    cv::Mat3b darkframe = read_image(_darkframe);
+    std::vector<cv::Mat> images = read_images(files);
+    cv::Mat darkframe = read_image(_darkframe);
     cv::Mat out;
     for (const auto &im : images) {
         path = fs::path(files[idx++]);
@@ -45,11 +45,11 @@ void subtract(const std::vector<std::string> files, const std::string &_darkfram
     }
 }
 
-cv::Mat3b coadd(const std::vector<cv::Mat3b> &images) {
+cv::Mat coadd(const std::vector<cv::Mat> &images) {
 //    std::cout << "{max_features} - " << max_features << std::endl;
 //    std::cout << "{good_match_percent} - " << good_match_percent << std::endl;
 //    std::cout << "{separation_adjustment} - " << separation_adjustment << std::endl;
-    if (images.empty()) return cv::Mat3b();
+    if (images.empty()) return cv::Mat();
 
     // Protect against hardware concurrency larger than number of images
     const int nthreads = max_threads > images.size() ? images.size() : max_threads;
@@ -92,7 +92,7 @@ cv::Mat3b coadd(const std::vector<cv::Mat3b> &images) {
     
     return out;
 }
-cv::Mat3b median_coadd(const std::vector<cv::Mat3b> &images) {
+cv::Mat median_coadd(const std::vector<cv::Mat> &images) {
 // Takes the median at each pixel for a stack of images. Assumes the images
 // are aligned and that they are the same size.
     const int nthreads = max_threads > images[0].rows * images[0].cols ? 1 : max_threads;
@@ -113,12 +113,12 @@ cv::Mat3b median_coadd(const std::vector<cv::Mat3b> &images) {
 
     for (auto &t : threads) t.join();
 
-    cv::Mat3b result;
+    cv::Mat result;
     cv::merge(_result, result);
     
     return result;
 }
-void _median_coadd(const int tidx, const std::vector<cv::Mat3b> &images, std::vector<cv::Mat> &output, size_t offset, const size_t end) {
+void _median_coadd(const int tidx, const std::vector<cv::Mat> &images, std::vector<cv::Mat> &output, size_t offset, const size_t end) {
 // Abstraction for parallel execution of [median()]. Hard coded for use with 3-channel input 
 // only (pointer stuff would get too complicated otherwise).
 //    std::cout << "Thread "+std::to_string(tidx)+" started. Region: "+std::to_string(offset)+" through "+std::to_string(end)+"\n" << std::flush;
@@ -153,13 +153,13 @@ void _median_coadd(const int tidx, const std::vector<cv::Mat3b> &images, std::ve
     std::cout << std::endl;
 }
 
-std::vector<cv::Mat3b> scrub_hot_pixels(const std::vector<cv::Mat3b> images) {
-    cv::Mat3b m = images[0];
+std::vector<cv::Mat> scrub_hot_pixels(const std::vector<cv::Mat> images) {
+    cv::Mat m = images[0];
     const cv::Vec3b zero(0, 0, 0);
     int idx = 0;
     long hot = 0;
     std::cout << "Scrubbing hot pixels..." << std::endl;
-    for (auto image : std::vector<cv::Mat3b>(images.begin() + 1, images.end())) {
+    for (auto image : std::vector<cv::Mat>(images.begin() + 1, images.end())) {
         if (image.rows != m.rows || image.cols != m.cols) {
             std::cout << "Error, shape mismatch on image with shape " << image.rows << "x" << image.cols;
             std::cout << " expected " << m.rows << "x" << m.cols << std::endl;
@@ -193,7 +193,7 @@ std::vector<cv::Mat3b> scrub_hot_pixels(const std::vector<cv::Mat3b> images) {
     return images;
 }
 
-cv::Mat4b advanced_coadd(const std::vector<cv::Mat3b> images, double threshold) {
+cv::Mat4b advanced_coadd(const std::vector<cv::Mat> images, double threshold) {
 // BROKEN
    if (images.empty()) return cv::Mat();
    
@@ -288,8 +288,8 @@ void align_stars(cv::Mat &anc, cv::Mat &com, cv::Mat &result) {
     const size_t iters = 4;
 
     // Extract a mask of only the brightest stars (within 0.5% of max brightness)
-    const cv::Mat3b anc_stars = brightness_find_legacy(anc, find_max({anc}), 2);
-    const cv::Mat3b com_stars = brightness_find_legacy(com, find_max({com}), 2);
+    const cv::Mat anc_stars = brightness_find_legacy(anc, find_max({anc}), 2);
+    const cv::Mat com_stars = brightness_find_legacy(com, find_max({com}), 2);
 
     // Convert star masks into vector of positions
     const std::vector<std::pair<double, double>> anc_pos = star_positions(anc_stars, 100);
@@ -414,7 +414,7 @@ std::vector<double> find_separations(std::vector<cv::DMatch> matches, std::vecto
     return separations;
 }
 
-void interpolate_simple(cv::Mat3b &im, const Blob &blob) {
+void interpolate_simple(cv::Mat &im, const Blob &blob) {
     
 }
 
@@ -449,9 +449,13 @@ void _blob_extract(const cv::Mat &mask, Blob &blob, uchar* pixel, uchar* start) 
     
 }
 
-cv::Mat median_filter(const cv::Mat &image, const FilterMode mode, const size_t kernel, const long smoothing) {
+cv::Mat median_filter(const cv::Mat &image, const FilterMode mode, const size_t _kernel, const long smoothing, const long jitter) {
     cv::Mat out(image.rows, image.cols, image.type());
     const size_t nb = image.channels();
+
+    std::mt19937 gen;
+    std::uniform_int_distribution<> jitterer = prng((_kernel - 1) < jitter ? -jitter : -(_kernel - 1), jitter, gen);
+    size_t kernel = _kernel + jitterer(gen);
 
     if (mode == FilterMode::global) {
         for (int b = 0; b < nb; b ++) {
@@ -471,15 +475,18 @@ cv::Mat median_filter(const cv::Mat &image, const FilterMode mode, const size_t 
         for (int b = 0; b < nb; b ++) {
             cv::extractChannel(image, channel, b);
             std::vector<Chunk> chunks;
+            std::vector<size_t> kernels;
 
             for (long r = 0; r < channel.rows; r += kernel) {
                 chunks.push_back(gaussian_estimate(channel.ptr(r, 0), channel.cols, Extent { 0, channel.cols, 0, (kernel + r < channel.rows ? (long)kernel : channel.rows - r) }));
+                kernel = _kernel + jitterer(gen);
+                kernels.push_back(kernel);
             }
             smooth_median(chunks, smoothing);
 
-            for (long r = 0, ii = 0; r < channel.rows; r += kernel, ii ++) {
+            for (long r = 0, ii = 0; r < channel.rows; r += kernels[ii], ii ++) {
                 pixel = out.ptr(r, 0) + b;
-                for (size_t rc = r * channel.cols; rc < channel.cols * (kernel + r) && rc < channel.total(); rc ++, pixel += nb) {
+                for (size_t rc = r * channel.cols; rc < channel.cols * (kernels[ii] + r) && rc < channel.total(); rc ++, pixel += nb) {
                     *pixel = channel.data[rc] > chunks[ii].median ? channel.data[rc] - chunks[ii].median : 0;
                 }
             }
@@ -491,15 +498,18 @@ cv::Mat median_filter(const cv::Mat &image, const FilterMode mode, const size_t 
         for (int b = 0; b < nb; b ++) {
             cv::extractChannel(image, channel, b);
             std::vector<Chunk> chunks;
+            std::vector<size_t> kernels;
             
             for (long c = 0; c < channel.cols; c += kernel) {
                 chunks.push_back(gaussian_estimate(channel.ptr(0, c), channel.cols, Extent { 0, (kernel + c < channel.cols ? (long)kernel : channel.cols - c), 0, channel.rows }));
+                kernel = _kernel + jitterer(gen);
+                kernels.push_back(kernel);
             }    
             smooth_median(chunks, smoothing);
 
-            for (long c = 0, ii = 0; c < channel.cols; c += kernel, ii ++) {
+            for (long c = 0, ii = 0; c < channel.cols; c += kernels[ii], ii ++) {
                 for (size_t _r = 0; _r < channel.rows; _r ++) {
-                    for (size_t _c = c; _c < c + kernel; _c ++) { 
+                    for (size_t _c = c; _c < c + kernels[ii]; _c ++) { 
                         *(out.ptr(_r, _c) + b) = channel.data[_r * channel.cols + _c] > chunks[ii].median ? channel.data[_r * channel.cols + _c] - chunks[ii].median : 0;
                     }
                 }

@@ -9,6 +9,8 @@
  */
 
 #include "compute.h"
+
+std::random_device rd;
  
 double median(std::vector<double> &v) {
     if (v.empty()) {
@@ -41,4 +43,13 @@ std::vector<std::pair<double, double>> rotate(const std::vector<std::pair<double
 	}
 	
 	return result;
+}
+
+std::uniform_int_distribution<> prng(const long min, const long max, std::mt19937 &gen) {
+    std::mutex mtx;
+    mtx.lock();
+    gen = std::mt19937(rd());
+    mtx.unlock();
+    std::uniform_int_distribution<> distr(min, max);
+    return distr;
 }

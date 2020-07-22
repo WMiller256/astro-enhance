@@ -19,6 +19,7 @@ int main(int argn, char** argv) {
     std::string mode;
     size_t kernel;
     long smoothing;
+    long jitter;
 
    	po::options_description description("Allowed Options");
 
@@ -30,6 +31,8 @@ int main(int argn, char** argv) {
 			                                                          " for each iteration of the filter. Does not apply to filtering mode 'global'")
 			("smoothing,s", po::value<long>(&smoothing)->default_value(0), "The smoothing factor for row and column based filtering. (The size"
 			                                                               " of the rolling average to use)")
+			("jitter,j", po::value<long>(&jitter)->default_value(0), "Jitter to apply to filter chunking, to prevent co-incident chunk boundaries"
+			                                                         " in an image stack.")
 		;
 	}
 	catch (...) {
@@ -65,7 +68,7 @@ int main(int argn, char** argv) {
     std::atomic<int> progress(0);
     #pragma omp parallel for schedule(dynamic)
 	for (int ii = 0; ii < images.size(); ii ++) {
-        cv::Mat3b subtracted = median_filter(images[ii], fmode, kernel, smoothing);
+        cv::Mat3b subtracted = median_filter(images[ii], fmode, kernel, smoothing, jitter);
 
         fs::path path(files[ii]);
         cv::imwrite(path.replace_filename(path.stem().string()+"_msub"+path.extension().string()), subtracted);

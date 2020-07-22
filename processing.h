@@ -18,11 +18,11 @@ void accumulate(const std::vector<cv::Mat> images, cv::Mat &m, const size_t &n);
 void subtract(const std::vector<std::string> files, 
               const std::string &_darkframe, const double &factor = 1.0);
 
-cv::Mat3b coadd(const std::vector<cv::Mat3b> &images);
-cv::Mat3b median_coadd(const std::vector<cv::Mat3b> &images);
-void _median_coadd(const int tidx, const std::vector<cv::Mat3b> &images, std::vector<cv::Mat> &output, size_t offset, const size_t end);
+cv::Mat coadd(const std::vector<cv::Mat> &images);
+cv::Mat median_coadd(const std::vector<cv::Mat> &images);
+void _median_coadd(const int tidx, const std::vector<cv::Mat> &images, std::vector<cv::Mat> &output, size_t offset, const size_t end);
 
-std::vector<cv::Mat3b> scrub_hot_pixels(const std::vector<cv::Mat3b> images);
+std::vector<cv::Mat> scrub_hot_pixels(const std::vector<cv::Mat> images);
 
 void align_stars(cv::Mat &anc, cv::Mat &com, cv::Mat &result);
 void align_images(cv::Mat &im1, cv::Mat &im2, cv::Mat &imreg);				// Aligns two given images and stores aligned result in {imreg}
@@ -32,10 +32,10 @@ double find_separation(cv::DMatch m, std::vector<cv::KeyPoint> kp1, std::vector<
 // Calculates the separation (pixel distance) between all matched features in {matches}
 std::vector<double> find_separations(std::vector<cv::DMatch> matches, std::vector<cv::KeyPoint> kp1, std::vector<cv::KeyPoint> kp2);
 
-void interpolate_simple(cv::Mat3b &im, const cv::Mat &starmask);
+void interpolate_simple(cv::Mat &im, const cv::Mat &starmask);
 std::vector<Blob> blob_extract(const cv::Mat &im);
 void _blob_extract(const cv::Mat &mask, Blob &blob, uchar* pixel, uchar* start);
 
-cv::Mat median_filter(const cv::Mat &image, const FilterMode mode = FilterMode::global, const size_t kernel = 10, const long smoothing = 0);
+cv::Mat median_filter(const cv::Mat &image, const FilterMode mode = FilterMode::global, const size_t kernel = 10, const long smoothing = 0, const long jitter = 0);
 void normalize(cv::Mat &image, const double &c);
 void smooth_median(std::vector<Chunk> &chunks, const long smoothing);
