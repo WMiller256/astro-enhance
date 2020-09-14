@@ -62,13 +62,13 @@ int main(int argn, char** argv) {
 	else if (mode == "rowcol") fmode = FilterMode::rowcol;
 	else if (mode == "colrow") fmode = FilterMode::colrow;
 
-    std::vector<cv::Mat3b> images = read_images(files);
+    std::vector<cv::Mat> images = read_images(files);
 
     std::cout << "Performing " << mode << " median filtering... " << std::endl;
     std::atomic<int> progress(0);
     #pragma omp parallel for schedule(dynamic)
 	for (int ii = 0; ii < images.size(); ii ++) {
-        cv::Mat3b subtracted = median_filter(images[ii], fmode, kernel, smoothing, jitter);
+        cv::Mat subtracted = median_filter(images[ii], fmode, kernel, smoothing, jitter);
 
         fs::path path(files[ii]);
         cv::imwrite(path.replace_filename(path.stem().string()+"_msub"+path.extension().string()), subtracted);

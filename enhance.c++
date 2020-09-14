@@ -6,7 +6,7 @@ cv::Mat read_image(std::string file) {              // Read the image file speci
         return cv::Mat();    
     }
 
-    cv::Mat image = cv::imread(file, cv::IMREAD_ANYDEPTH);
+    cv::Mat image = cv::imread(file, cv::IMREAD_COLOR);
     return image;
 }
 
@@ -19,8 +19,8 @@ std::vector<cv::Mat> read_images(std::vector<std::string> files) { // Read the i
     int count = 0;
 #pragma omp parallel for schedule(dynamic)
     for (int ii = 0; ii < files.size(); ++ii) {                      // Then for every file in the list
-        cv::Mat image;                                             // create a new temporary [cv::Mat] object,
-        image = cv::imread(files[ii], cv::IMREAD_ANYDEPTH);          // read the {ii}th file from {files} into the temp 
+        cv::Mat image;                                               // create a new temporary [cv::Mat] object,
+        image = cv::imread(files[ii], cv::IMREAD_COLOR);             // read the {ii}th file from {files} into the temp 
         mtx.lock();
         if (!image.empty()) {                                        // object. If it is not empty
             images.push_back(image);                                 // Push it onto the images vector
@@ -125,7 +125,7 @@ cv::Mat gaussian_find(const cv::Mat &_image, long w, size_t z) {
     // First convert image to grayscale and set up binary output
     cv::Mat image(_image.rows, _image.cols, CV_8UC1);
     cvtColor(_image, image, cv::COLOR_BGR2GRAY);
-    cv::Mat out = cv::Mat::zeros(_image.rows, _image.cols, CV_8UC1);
+    cv::Mat out = cv::Mat::zeros(_image.rows, _image.cols, CV_16FC1);
     
     // Iterating pointers is much faster than using [.at<>()]
     uchar* pixel = image.ptr(0, 0);
@@ -172,7 +172,7 @@ cv::Mat gaussian_find(const cv::Mat &_image, long w, size_t z) {
 
             // Not taking the absolute value of the difference here because we only want 
             // pixels that are {z} standard deviations brighter than their surroundings
-            if (*pixel - chunk.mean > z * chunk.std) *_out = 255;
+            if (*pixel - chunk.mean > z * chunk.std) *_out = 100;
             // NOTE Could filter out blobs below a certain extent here, don't necessarily need another loop
         }
     }
