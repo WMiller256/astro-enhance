@@ -53,8 +53,8 @@ int main(int argn, char** argv) {
 				" the pixel coordinates of each match in one image compared to another.")
 			("matchpercent", po::value<double>(&good_match_percent), "The percentage of matches to keep - matches"
 				" are first sorted by match quality and then only this percent of matches are kept.")
-			("draw",			  po::bool_switch()->default_value(false), "Draw the matches between each pair of images")
-			("threshold",	  po::value<double>(&threshold)->default_value(0.1), "Only in effect if --advanced is true"
+			("draw",		 po::bool_switch()->default_value(false), "Draw the matches between each pair of images")
+			("threshold",	 po::value<double>(&threshold)->default_value(0.1), "Only in effect if --advanced is true"
 				", the brightness below which pixels will be ignored.")
 		; 	
 	}

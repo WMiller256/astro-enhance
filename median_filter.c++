@@ -17,6 +17,7 @@ int main(int argn, char** argv) {
     std::cout << res;
     std::vector<std::string> files;
     std::string mode;
+    bool norm;
     size_t kernel;
     long smoothing;
     long jitter;
@@ -27,8 +28,9 @@ int main(int argn, char** argv) {
 		description.add_options()
 			("images,i", po::value<std::vector<std::string> >()->multitoken(), "The images on which to perform the subtraction.")
 			("mode,m", po::value<std::string>(&mode)->default_value("global"), "The filtering mode to apply: global, local, row, or column.")
+			("normalize,n", po::bool_switch()->default_value(false), "Whether or not to normalize the channels collectively (false) or independently (true).")
 			("kernel,k", po::value<size_t>(&kernel)->default_value(10), "The kernel to use when filtering, i.e. the size of the region to sample"
-			                                                          " for each iteration of the filter. Does not apply to filtering mode 'global'")
+			                                                            " for each iteration of the filter. Does not apply to filtering mode 'global'")
 			("smoothing,s", po::value<long>(&smoothing)->default_value(0), "The smoothing factor for row and column based filtering. (The size"
 			                                                               " of the rolling average to use)")
 			("jitter,j", po::value<long>(&jitter)->default_value(0), "Jitter to apply to filter chunking, to prevent co-incident chunk boundaries"
@@ -62,13 +64,15 @@ int main(int argn, char** argv) {
 	else if (mode == "rowcol") fmode = FilterMode::rowcol;
 	else if (mode == "colrow") fmode = FilterMode::colrow;
 
+	norm = vm["normalize"].as<bool>();
+
     std::vector<cv::Mat> images = read_images(files);
 
     std::cout << "Performing " << mode << " median filtering... " << std::endl;
     std::atomic<int> progress(0);
     #pragma omp parallel for schedule(dynamic)
 	for (int ii = 0; ii < images.size(); ii ++) {
-        cv::Mat subtracted = median_filter(images[ii], fmode, kernel, smoothing, jitter);
+        cv::Mat subtracted = median_filter(images[ii], fmode, norm, kernel, smoothing, jitter);
 
         fs::path path(files[ii]);
         cv::imwrite(path.replace_filename(path.stem().string()+"_msub"+path.extension().string()), subtracted);

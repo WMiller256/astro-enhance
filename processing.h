@@ -36,6 +36,7 @@ void interpolate_simple(cv::Mat &im, const cv::Mat &starmask);
 std::vector<Blob> blob_extract(const cv::Mat &im);
 void _blob_extract(const cv::Mat &mask, Blob &blob, uchar* pixel, uchar* start);
 
-cv::Mat median_filter(const cv::Mat &image, const FilterMode mode = FilterMode::global, const size_t kernel = 10, const long smoothing = 0, const long jitter = 0);
+cv::Mat median_filter(const cv::Mat &image, const FilterMode mode = FilterMode::global, const bool norm = false, 
+                      const size_t kernel = 10, const long smoothing = 0, const long jitter = 0);
 void normalize(cv::Mat &image, const double &c);
 void smooth_median(std::vector<Chunk> &chunks, const long smoothing);

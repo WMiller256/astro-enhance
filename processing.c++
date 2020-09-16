@@ -449,7 +449,8 @@ void _blob_extract(const cv::Mat &mask, Blob &blob, uchar* pixel, uchar* start) 
     
 }
 
-cv::Mat median_filter(const cv::Mat &image, const FilterMode mode, const size_t _kernel, const long smoothing, const long jitter) {
+cv::Mat median_filter(const cv::Mat &image, const FilterMode mode, const bool norm, const size_t _kernel, 
+                      const long smoothing, const long jitter) {
     cv::Mat out(image.rows, image.cols, image.type());
     const size_t nb = image.channels();
 
@@ -458,14 +459,23 @@ cv::Mat median_filter(const cv::Mat &image, const FilterMode mode, const size_t 
     size_t kernel = _kernel + jitterer(gen);
 
     if (mode == FilterMode::global) {
-        for (int b = 0; b < nb; b ++) {
-            cv::Mat channel(image.rows, image.cols, CV_8UC1);
-            cv::extractChannel(image, channel, b);
-            Chunk chunk = gaussian_estimate(channel.ptr(0, 0), channel.cols, Extent { 0, channel.cols, 0, channel.rows });
+        if (norm) {
+            for (int b = 0; b < nb; b ++) {
+                cv::Mat channel(image.rows, image.cols, CV_8UC1);
+                cv::extractChannel(image, channel, b);
+                Chunk chunk = gaussian_estimate(channel.ptr(0, 0), channel.cols, Extent { 0, channel.cols, 0, channel.rows });
 
-            uchar* pixel = out.ptr(0, 0) + b;
-            for (size_t rc = 0; rc < channel.total(); rc ++, pixel += nb) {
-                *pixel = channel.data[rc] > chunk.median ? channel.data[rc] - chunk.median : 0;
+                uchar* pixel = out.ptr(0, 0) + b;
+                for (size_t rc = 0; rc < channel.total(); rc ++, pixel += nb) {
+                    *pixel = channel.data[rc] > chunk.median ? channel.data[rc] - chunk.median : 0;
+                }
+            }
+        }
+        else {
+            Chunk chunk = gaussian_estimate(image.ptr(0, 0), image.cols, Extent { 0, image.cols, 0, image.rows });
+            uchar* pixel = out.ptr(0, 0);
+            for (size_t rc = 0; rc < image.rows * image.cols * nb; rc ++, pixel ++) {
+                *pixel = image.data[rc] > chunk.median ? image.data[rc] - chunk.median : 0;
             }
         }
     }
