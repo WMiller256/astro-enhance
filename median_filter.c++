@@ -18,6 +18,7 @@ int main(int argn, char** argv) {
     std::vector<std::string> files;
     std::string mode;
     bool norm;
+    bool stretch;
     size_t kernel;
     long smoothing;
     long jitter;
@@ -29,6 +30,7 @@ int main(int argn, char** argv) {
 			("images,i", po::value<std::vector<std::string> >()->multitoken(), "The images on which to perform the subtraction.")
 			("mode,m", po::value<std::string>(&mode)->default_value("global"), "The filtering mode to apply: global, local, row, or column.")
 			("normalize,n", po::bool_switch()->default_value(false), "Whether or not to normalize the channels collectively (false) or independently (true).")
+			("stretch,s", po::bool_switch()->default_value(false), "Whether or not to stretch the output to cover maximum brightness range")
 			("kernel,k", po::value<size_t>(&kernel)->default_value(10), "The kernel to use when filtering, i.e. the size of the region to sample"
 			                                                            " for each iteration of the filter. Does not apply to filtering mode 'global'")
 			("smoothing,s", po::value<long>(&smoothing)->default_value(0), "The smoothing factor for row and column based filtering. (The size"
@@ -65,6 +67,7 @@ int main(int argn, char** argv) {
 	else if (mode == "colrow") fmode = FilterMode::colrow;
 
 	norm = vm["normalize"].as<bool>();
+	stretch = vm["stretch"].as<bool>();
 
     std::vector<cv::Mat> images = read_images(files);
 
@@ -72,7 +75,7 @@ int main(int argn, char** argv) {
     std::atomic<int> progress(0);
     #pragma omp parallel for schedule(dynamic)
 	for (int ii = 0; ii < images.size(); ii ++) {
-        cv::Mat subtracted = median_filter(images[ii], fmode, norm, kernel, smoothing, jitter);
+        cv::Mat subtracted = median_filter(images[ii], fmode, norm, stretch, kernel, smoothing, jitter);
 
         fs::path path(files[ii]);
         cv::imwrite(path.replace_filename(path.stem().string()+"_msub"+path.extension().string()), subtracted);

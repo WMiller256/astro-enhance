@@ -344,14 +344,14 @@ uchar find_max(std::vector<cv::Mat> images) {
 }
     
 std::vector<cv::Mat> extract_frames(std::vector<std::string> files) {  // Extract all frames of given video files to a single
-                                                                         // vector of [cv::Mat] objects
+                                                                       // vector of [cv::Mat] objects
     if (files.empty()) return std::vector<cv::Mat>();                  // Guard against seg fault on empty list with return catch
     
     std::vector<cv::Mat> frames;                                       // Initialize a new vector of [cv::Mat] objects
     std::cout << "Extracting files..." << std::endl;
     frames = read_video(files);
-    return frames;                                                       // Return the [cv::Mat] vector {frames} when all files have been
-}                                                                        // read in.
+    return frames;                                                     // Return the [cv::Mat] vector {frames} when all files have been
+}                                                                      // read in.
 
 std::vector<cv::Mat> read_video(std::vector<std::string> videos) {
     /* -    -    -    -    -    -    -    -    - 
