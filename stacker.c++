@@ -20,7 +20,7 @@
 
 cv::Mat3b key;
 std::string keyframe;
-std::vector<cv::Mat3b> aligned;
+std::vector<cv::Mat> aligned;
 std::atomic<int> complete;
 std::vector<std::string> images;
 
@@ -30,7 +30,7 @@ int main(int argn, char** argv) {
 	std::cout << res;
 	std::string ofile;
 	std::string date = datetime();
-	nthreads = max_threads;
+	int nthreads = max_threads;
 	bool advanced;
 	double threshold = 0;
 
@@ -38,7 +38,7 @@ int main(int argn, char** argv) {
 	good_match_percent = 0.01;
 	separation_adjustment = 0.05;
 	
-	po::options_description description("Allowed Options");
+	po::options_description description("Usage");
 	
 	try {
 		description.add_options()

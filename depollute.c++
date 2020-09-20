@@ -20,7 +20,7 @@ int main(int argn, char** argv) {
     size_t scale;
     size_t z;
 
-   	po::options_description description("Allowed Options");
+   	po::options_description description("Usage");
 
 	try {
 		description.add_options()

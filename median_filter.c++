@@ -23,14 +23,14 @@ int main(int argn, char** argv) {
     long smoothing;
     long jitter;
 
-   	po::options_description description("Allowed Options");
+   	po::options_description description("Usage");
 
 	try {
 		description.add_options()
 			("images,i", po::value<std::vector<std::string> >()->multitoken(), "The images on which to perform the subtraction.")
 			("mode,m", po::value<std::string>(&mode)->default_value("global"), "The filtering mode to apply: global, local, row, or column.")
-			("normalize,n", po::bool_switch()->default_value(false), "Whether or not to normalize the channels collectively (false) or independently (true).")
-			("stretch,s", po::bool_switch()->default_value(false), "Whether or not to stretch the output to cover maximum brightness range")
+			("normalize", po::bool_switch()->default_value(false), "Whether or not to normalize the channels collectively (false) or independently (true).")
+			("stretch", po::bool_switch()->default_value(false), "Whether or not to stretch the output to cover maximum brightness range")
 			("kernel,k", po::value<size_t>(&kernel)->default_value(10), "The kernel to use when filtering, i.e. the size of the region to sample"
 			                                                            " for each iteration of the filter. Does not apply to filtering mode 'global'")
 			("smoothing,s", po::value<long>(&smoothing)->default_value(0), "The smoothing factor for row and column based filtering. (The size"

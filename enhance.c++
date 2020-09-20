@@ -388,7 +388,7 @@ std::vector<cv::Mat> read_video(std::vector<std::string> videos) {
             return std::vector<cv::Mat>();
         }
 
-        in_codec = avcodec_find_encoder(AV_CODEC_ID_MPEG4);                // Determine the video codec from the file
+        in_codec = avcodec_find_encoder(informat_ctx->video_codec_id);  // Determine the video codec from the file
         if (!in_codec) {
             std::cout << red+white_back+"Error - could not find mpeg4 codec."+res << std::endl;
             exit(1);

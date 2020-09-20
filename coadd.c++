@@ -23,7 +23,7 @@ int main(int argn, char** argv) {
 	bool pixel_scrubbing;
 	std::string mode;
 
-	po::options_description description("Allowed Options");
+	po::options_description description("Usage");
 
 	try {
 		description.add_options()

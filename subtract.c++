@@ -22,7 +22,7 @@ int main(int argn, char** argv) {
 	std::string darkframe;
 	double factor;
 
-	po::options_description description("Allowed Options");
+	po::options_description description("Usage");
 	try {
 		description.add_options()
 			("images,i", po::value<std::vector<std::string> >()->multitoken(), "The images to coadd.")
