@@ -3,46 +3,54 @@
 
 double star_threshold;
 std::string mode;
-int nn = 0;
+long nn;
 
 int main(int argn, char** argv) {
 	std::vector<std::string> files;
 
-	star_threshold = 0.995;
-	for (int ii = 1; ii < argn; ii ++) {
-		if (argv[ii][0] != '-') {
-			files.push_back(argv[ii]);
-		}
-		else {
-			std::cout << cyan+" ARG: "+res << argv[ii] << " ";
-			if (strcmp(argv[ii], "-t") == 0) {
-				star_threshold = atof(argv[++ii]);
-				std::cout << star_threshold;
-			}
-			else if (strcmp(argv[ii],"-mode") == 0) {
-				mode = argv[++ii];
-				std::cout << mode; 
-			}
-			else if (strcmp(argv[ii], "-nn") == 0) {
-				nn = atoi(argv[++ii]);
-				std::cout << nn;
-			}
-			std::cout << std::endl;
-		}
+   	po::options_description description("Usage");
+	try {
+		description.add_options()
+			("input,i", po::value<std::vector<std::string> >()->multitoken(), "The images on which to perform the subtraction.")
+			("mode,m", po::value<std::string>(&mode)->default_value("frames"), "The processing mode to use, either {frames} if the inputs are image files or {video} if they are video files.")
+			("nn", po::value<long>(&nn)->default_value(0), "The nearest-neighbor depth to use.")
+			("threshold,t", po::value<double>(&star_threshold)->default_value(0.995), "The relative brightness threshold to use in stellar extraction.")
+		;
 	}
+	catch (...) {
+		std::cout << "Error in boost program options initialization" << std::endl;
+		exit(0);
+	}
+
+  	po::variables_map vm;
+    try {
+    	po::store(po::command_line_parser(argn, argv).options(description).run(), vm);
+    	po::notify(vm);
+    }
+    catch (...) {
+        std::cout << description << std::endl;
+        exit(1);
+    }
+
+	if (vm.count("input")) files = vm["input"].as<std::vector<std::string> >();
+	else {
+        std::cout << description << std::endl;
+   		exit(2);
+	}
+
 	if (mode == "frames") {	
-		std::vector<cv::Mat3b> images = read_images(files);
-		cv::Mat3b coadded_image = coadd(images);
-		cv::Mat3b star_trails = star_trail(images);
-		cv::Mat3b output = coadded_image + star_trails;
+		std::vector<cv::Mat> images = read_images(files);
+		cv::Mat coadded_image = coadd(images);
+		cv::Mat star_trails = star_trail(images);
+		cv::Mat output = coadded_image + star_trails;
 		imwrite("./composite.tif", output);
 	}
 	else if (mode == "video") {
-		std::vector<cv::Mat3b> frames = extract_frames(files);
-		cv::Mat3b coadded_image = coadd(frames);
-		cv::Mat3b star_trails = star_trail(frames);
+		std::vector<cv::Mat> frames = extract_frames(files);
+		cv::Mat coadded_image = coadd(frames);
+		cv::Mat star_trails = star_trail(frames);
 		std::cout << "Coadding... " << std::flush;
-		cv::Mat3b output = coadded_image + star_trails;
+		cv::Mat output = coadded_image + star_trails;
 		std::cout << green+bright+" done"+res+"." << std::endl;
 		output.convertTo(output, CV_8UC3);
 		imshow("Image", output);

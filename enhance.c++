@@ -377,8 +377,10 @@ std::vector<cv::Mat> read_video(std::vector<std::string> videos) {
     for (int ii = 0; ii < videos.size(); ii++) {                        // For every file in the filelist {videos}, attempt to open
         if ((ret = avformat_open_input(&informat_ctx, videos[ii].c_str(), NULL, NULL)) < 0) {
         	// If opening fails print error message and return default constructed `vector` of `cv::Mat`
-            std::cout << red << "Could not open file " << yellow << videos[ii] << res << "." << std::endl;
-            return std::vector<cv::Mat>();
+        	char errbuf[1024];
+        	av_strerror(ret, errbuf, 1024);
+            std::cout << "Could not open file "+yellow << videos[ii] << res+": " << errbuf << std::endl;
+            exit(-1);
         }
 
         // Read the meta data 
@@ -394,11 +396,12 @@ std::vector<cv::Mat> read_video(std::vector<std::string> videos) {
             exit(1);
         }
         inav_ctx = avcodec_alloc_context3(in_codec);
-        inav_ctx->width = 1920;
-        inav_ctx->height = 1080;
+//        inav_ctx->width = 1920;
+//        inav_ctx->height = 1080;
         inav_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
 
         avcodec_open2(inav_ctx, in_codec, NULL);                        // Open the input codec
+        std::cout << inav_ctx->width << " " << inav_ctx->height << std::endl;
 
         std::vector<uint8_t> framebuf(avpicture_get_size(pixel_format, inav_ctx->width, inav_ctx->height));
         avpicture_fill(reinterpret_cast<AVPicture*>(frame), framebuf.data(), pixel_format, inav_ctx->width, inav_ctx->height);
