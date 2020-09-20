@@ -348,7 +348,7 @@ std::vector<cv::Mat> extract_frames(std::vector<std::string> files) {  // Extrac
     if (files.empty()) return std::vector<cv::Mat>();                  // Guard against seg fault on empty list with return catch
     
     std::vector<cv::Mat> frames;                                       // Initialize a new vector of [cv::Mat] objects
-    std::cout << "Extracting files..." << std::endl;
+    std::cout << "Extracting frames..." << std::endl;
     frames = read_video(files);
     return frames;                                                     // Return the [cv::Mat] vector {frames} when all files have been
 }                                                                      // read in.
@@ -362,13 +362,14 @@ std::vector<cv::Mat> read_video(std::vector<std::string> videos) {
     AVFormatContext* informat_ctx = NULL;
     AVFrame* frame = NULL;
     AVFrame* decframe = NULL;
-    AVPixelFormat pixel_format = AV_PIX_FMT_BGR24;
     AVCodecContext* inav_ctx = NULL;
     AVCodec* in_codec = NULL;
     int valid_frame = 0;
+    int video_stream = -1;
     frame = av_frame_alloc();
     decframe = av_frame_alloc();
 
+    av_register_all();
     avcodec_register_all();
     
     int ret;
@@ -387,37 +388,46 @@ std::vector<cv::Mat> read_video(std::vector<std::string> videos) {
         ret = avformat_find_stream_info(informat_ctx, 0);
         if (ret < 0) {
             std::cout << red << "Failed to read input file information. " << res << std::endl;
-            return std::vector<cv::Mat>();
+            exit(-1);
         }
 
-        in_codec = avcodec_find_encoder(informat_ctx->video_codec_id);  // Determine the video codec from the file
-        if (!in_codec) {
-            std::cout << red+white_back+"Error - could not find mpeg4 codec."+res << std::endl;
+        for(ii = 0; ii < informat_ctx->nb_streams; ii ++) {
+            if (informat_ctx->streams[ii]->codec->codec_type == AVMEDIA_TYPE_VIDEO && video_stream < 0) {
+                video_stream = ii;
+            }
+        }
+        if (video_stream == -1) {
+            std::cout << "Could not find stream index." << std::endl;
+            exit(-1);
+        }
+
+        in_codec = avcodec_find_decoder(informat_ctx->streams[video_stream]->codec->codec_id);
+        if (in_codec == NULL) {
+            std::cout << "Could not find codec: " << avcodec_get_name(informat_ctx->streams[video_stream]->codec->codec_id) << std::endl;
             exit(1);
         }
-        inav_ctx = avcodec_alloc_context3(in_codec);
-//        inav_ctx->width = 1920;
-//        inav_ctx->height = 1080;
-        inav_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
+        inav_ctx = informat_ctx->streams[video_stream]->codec;
 
         avcodec_open2(inav_ctx, in_codec, NULL);                        // Open the input codec
-        std::cout << inav_ctx->width << " " << inav_ctx->height << std::endl;
 
-        std::vector<uint8_t> framebuf(avpicture_get_size(pixel_format, inav_ctx->width, inav_ctx->height));
-        avpicture_fill(reinterpret_cast<AVPicture*>(frame), framebuf.data(), pixel_format, inav_ctx->width, inav_ctx->height);
+        std::vector<uint8_t> framebuf(avpicture_get_size(inav_ctx->pix_fmt, inav_ctx->width, inav_ctx->height));
+        avpicture_fill(reinterpret_cast<AVPicture*>(frame), framebuf.data(), AV_PIX_FMT_BGR24, inav_ctx->width, 
+                       inav_ctx->height);
+                       
+        struct SwsContext *img_convert_ctx;
         while (true) {
             AVPacket pkt;
             av_init_packet(&pkt);
-            std::cout << '\r' << cyan << ii << res << "| Frame: " << magenta;
+            std::cout << '\r' << cyan << ii << res << " | Frame: " << magenta;
             std::cout << std::setw(4) << std::setfill('0') << nframe++ << res;
             ret = av_read_frame(informat_ctx, &pkt);                     // Read the next frame in
             avcodec_decode_video2(inav_ctx, frame, &valid_frame, &pkt);  // Decode the next frame
-            if (ret == 0 && valid_frame == 0) {                          // If a valid frame was decoded
-                struct SwsContext *img_convert_ctx;                      // Convert to OpenCV compatible format
+            if (!valid_frame) continue;                                  // Ignore invalid frames   
+            if (ret == 0) {                                              
                 img_convert_ctx = sws_getContext(
                     inav_ctx->width,
                     inav_ctx->height,
-                    inav_ctx->pix_fmt,
+                    AV_PIX_FMT_BGR24,
                     inav_ctx->width,
                     inav_ctx->height,
                     AV_PIX_FMT_BGR24,
@@ -435,7 +445,7 @@ std::vector<cv::Mat> read_video(std::vector<std::string> videos) {
                 sws_freeContext(img_convert_ctx);
                                                                          // Then create a new [cv::Mat] object
                 cv::Mat _frame(frame->height, frame->width, CV_64FC3, framebuf.data(), frame->linesize[0]);
-                frames.push_back(_frame);                                    // And add it to the output vector
+                frames.push_back(_frame);                                // And add it to the output vector
             }
             else {
                 break;                                                   // Once an invalid frame is read, break out of loop
@@ -443,7 +453,6 @@ std::vector<cv::Mat> read_video(std::vector<std::string> videos) {
         }
         std::cout << std::endl;
     }
-    std::cout << frames[0].rows << " " << frames[0].cols << std::endl;
     return frames;                                                       // And return 
 }
 

@@ -71,13 +71,15 @@ cv::Mat coadd(const std::vector<cv::Mat> &images) {
 
     progress = 0;   // Have to reset progress to zero because the same object is used for all progress tracking
     print_percent(progress, size);
-    for (int ii = 0; ii < nt - 1; ii ++) {
+    accumulate(images, m[0], size);
+/*    for (int ii = 0; ii < nt - 1; ii ++) {
         threads[ii] = std::thread(accumulate, std::vector<cv::Mat>(images.begin() + ii * block, images.begin() + (ii + 1) * block), 
                                   std::ref(m[ii]), std::ref(size));
     }
     threads.back() = std::thread(accumulate, std::vector<cv::Mat>(images.begin() + block * (nt - 1), images.end()),
                                  std::ref(m[nt-1]), std::ref(size));
     for (auto &t : threads) t.join();
+*/
     
     std::cout << "Dividing... " << std::flush;
     cv::Mat out(m[0].rows, m[0].cols, CV_64FC3);
