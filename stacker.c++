@@ -77,6 +77,7 @@ int main(int argn, char** argv) {
 		images = vm["images"].as<std::vector<std::string> >();
 	}
 	else {
+        std::cout << description() << std::endl;
 		std::cout << "Error - must specify images to stack" << std::endl;
 		exit(2);
 	}
