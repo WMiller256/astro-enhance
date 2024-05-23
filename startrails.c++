@@ -36,21 +36,16 @@ int main(int argn, char** argv) {
 
 	if (mode == "frames") {	
 		std::vector<cv::Mat> images = read_images(files);
-		cv::Mat coadded_image = coadd(images);
 		cv::Mat star_trails = star_trail(images);
-		cv::Mat output = coadded_image + star_trails;
-		imwrite("./composite.tif", output);
+		imwrite("./composite.tif", star_trails);
 	}
 	else if (mode == "video") {
 		std::vector<cv::Mat> frames = extract_frames(files);
-		cv::Mat coadded_image = coadd(frames);
 		cv::Mat star_trails = star_trail(frames);
-		std::cout << "Coadding... " << std::flush;
-		cv::Mat output = coadded_image + star_trails;
 		std::cout << green+bright+" done"+res+"." << std::endl;
-		output.convertTo(output, CV_8UC3);
-		imshow("Image", output);
-		imwrite("./composite.tif", output);
+		star_trails.convertTo(star_trails, CV_8UC3);
+		imshow("Image", star_trails);
+		imwrite("./composite.tif", star_trails);
 	}
 	else {
 		std::cout << red << "Mode must be specified" << res << std::endl;

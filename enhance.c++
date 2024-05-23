@@ -39,13 +39,13 @@ cv::Mat star_trail(const std::vector<cv::Mat> images) {
     int rows = images[0].rows;
     int cols = images[0].cols;
 
-    cv::Mat image(rows, cols, CV_64FC3);                                 // Create an image initialized to 0's to hold the location of stars
+    cv::Mat image(rows, cols, CV_8UC3);                                 // Create an image initialized to 0's to hold the location of stars
     image.setTo(cv::Scalar(0, 0, 0, 0));
     cv::Mat layer;
 
     std::cout << "Accumulating star trails..." << std::endl;
     for (size_t img = 0; img < images.size(); ++img) {                 // Loop through every image in the vector {images}
-        images[img].convertTo(layer, CV_64FC3);
+        images[img].convertTo(layer, CV_8UC3);
 
         // Apply the 'lighten-only' filter
         cv::Vec3b* layer_pixel = layer.ptr<cv::Vec3b>(0, 0);
