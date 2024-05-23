@@ -68,4 +68,5 @@ std::ostream& operator<<(std::ostream &os, const Chunk &c) {
 	os << "std: " << std::setw(5) << c.std << ",  ";
 	os << "pos: (" << std::setw(5) << c.pos.x << ",  " << std::setw(5) << c.pos.y << "),  ";
 	os << "n: " << c.n << " ";
+	return os;
 }

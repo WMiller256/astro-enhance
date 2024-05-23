@@ -6,23 +6,22 @@ BIN      = ~/bin
 BUILD    = ./build
 RM       = /bin/rm -f
 MV       = /bin/mv -f
-CFLAGS   = -isystem /usr/local/include/opencv4/ -I /usr/local/include/eigen3/ -I /usr/lib/boost -Wno-deprecated-declarations -g -std=c++17 -rdynamic \
+CFLAGS   = -isystem /usr/include/opencv4/ -I /usr/include/eigen3/ -I /usr/lib/boost -Wno-deprecated-declarations -g -std=c++2a -rdynamic \
            -pthread -O3 -fopenmp
-CC       = /usr/bin/c++ $(CFLAGS)
+CC       = /usr/bin/g++ $(CFLAGS)
 
-           # OpenCV
-LIBS =     -lopencv_gapi -lopencv_stitching -lopencv_aruco -lopencv_bgsegm -lopencv_bioinspired    \
-           -lopencv_ccalib -lopencv_cvv -lopencv_dnn_objdetect -lopencv_dpm -lopencv_face          \
+LIBS =     -lopencv_stitching -lopencv_aruco -lopencv_bgsegm -lopencv_bioinspired                  \
+           -lopencv_ccalib -lopencv_dnn_objdetect -lopencv_dpm -lopencv_face                       \
            -lopencv_freetype -lopencv_fuzzy -lopencv_hdf -lopencv_hfs -lopencv_img_hash            \
-           -lopencv_line_descriptor -lopencv_quality -lopencv_reg -lopencv_rgbd -lopencv_saliency   \
-           -lopencv_sfm -lopencv_stereo -lopencv_structured_light -lopencv_superres                  \
-           -lopencv_surface_matching -lopencv_tracking -lopencv_videostab -lopencv_xfeatures2d       \
+           -lopencv_line_descriptor -lopencv_quality -lopencv_reg -lopencv_rgbd -lopencv_saliency  \
+           -lopencv_stereo -lopencv_structured_light -lopencv_superres                             \
+           -lopencv_surface_matching -lopencv_tracking -lopencv_videostab                          \
            -lopencv_xobjdetect -lopencv_xphoto -lopencv_shape -lopencv_datasets -lopencv_plot      \
            -lopencv_text -lopencv_dnn -lopencv_highgui -lopencv_ml -lopencv_phase_unwrapping       \
            -lopencv_optflow -lopencv_ximgproc -lopencv_video -lopencv_videoio -lopencv_imgcodecs   \
            -lopencv_objdetect -lopencv_calib3d -lopencv_features2d -lopencv_flann -lopencv_photo   \
-           -lopencv_imgproc -lopencv_core                                                            \
-           -lavutil -lavcodec -lavformat -lavdevice -lavfilter -lswscale                            \
+           -lopencv_imgproc -lopencv_core                                                          \
+           -lavutil -lavcodec -lavformat -lavdevice -lavfilter -lswscale                           \
            -lboost_program_options -lncurses -lstdc++fs
                     
 LFLAGS   = -Wall -Wl,-rpath,/usr/local/lib
@@ -42,8 +41,8 @@ RED     = \033[91m
 OBJS   = $(BUILD)/enhance.o               \
         $(BUILD)/processing.o             \
         $(BUILD)/compute.o                \
-        $(BUILD)/operators.o		      \
-        $(BUILD)/chunk.o				  \
+        $(BUILD)/operators.o              \
+        $(BUILD)/chunk.o                  \
         $(BUILD)/blob.o                   \
         $(BUILD)/iocustom.o
         
@@ -66,9 +65,15 @@ SUBTRACT   = $(BUILD)/subtract.o         \
              $(OBJS)
 
 MED_FILT   = $(BUILD)/median_filter.o    \
-               $(OBJS)
+             $(OBJS)
 
 ADV_COADD  = $(BUILD)/advanced_coadd.o   \
+             $(OBJS)
+
+GIFREPAIR  = $(BUILD)/gifrepair.o \
+             $(OBJS)
+             
+MINTER     = $(BUILD)/minter.o \
              $(OBJS)
 
 #Builds
@@ -121,6 +126,16 @@ stacker: $(STACKER)
 startrails: $(STARTRAILS)
 	@printf "[$(CYAN)Linking $(WHITE)]   $(BRIGHT)$(MAIN)$(WHITE) - $(MAGENTA)Binary$(WHITE)\n"
 	cd $(ABS); $(CC) $(STARTRAILS) $(LIBDIRS) -o $(BIN)/$@ $(LIBS)
+	@printf "[$(GREEN) Linked $(WHITE)]   $(BRIGHT)$(MAIN)$(WHITE) - $(MAGENTA)Binary$(WHITE)\n"
+
+gifrepair: $(GIFREPAIR)
+	@printf "[$(CYAN)Linking $(WHITE)]   $(BRIGHT)$(MAIN)$(WHITE) - $(MAGENTA)Binary$(WHITE)\n"
+	cd $(ABS); $(CC) $(GIFREPAIR) $(LIBDIRS) -o $(BIN)/$@ $(LIBS)
+	@printf "[$(GREEN) Linked $(WHITE)]   $(BRIGHT)$(MAIN)$(WHITE) - $(MAGENTA)Binary$(WHITE)\n"
+
+minter: $(MINTER)
+	@printf "[$(CYAN)Linking $(WHITE)]   $(BRIGHT)$(MAIN)$(WHITE) - $(MAGENTA)Binary$(WHITE)\n"
+	cd $(ABS); $(CC) $(MINTER) $(LIBDIRS) -o $(BIN)/$@ $(LIBS)
 	@printf "[$(GREEN) Linked $(WHITE)]   $(BRIGHT)$(MAIN)$(WHITE) - $(MAGENTA)Binary$(WHITE)\n"
 
 test: $(TEST)

@@ -49,11 +49,11 @@ int main(int argn, char** argv) {
 	}
 
 	
-	std::vector<cv::Mat3b> images = read_images(files);
+	std::vector<cv::Mat> images = read_images(files);
 	if (pixel_scrubbing) images = scrub_hot_pixels(images);
 
-	cv::Mat3b output;
+	cv::Mat output;
 	if (mode == "average") output = coadd(images);
-	else if (mode == "median") output = median(images);
+//	else if (mode == "median") output = median(images);
 	cv::imwrite("./coadded.tif", output);
 }

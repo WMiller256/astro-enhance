@@ -12,7 +12,9 @@
 
 // std
 #include <atomic>
+#include <chrono>
 #include <cmath>
+#include <cstdlib>
 #include <experimental/filesystem>
 #include <future>
 #include <iomanip>
@@ -23,7 +25,7 @@
 #include <thread>
 #include <valarray>
 
-// Opencv
+// ffmpeg
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavdevice/avdevice.h>
@@ -33,11 +35,12 @@ extern "C" {
 #include <libswscale/swscale.h>
 }
 
+// Opencv
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/opencv.hpp>
-#include <opencv2/xfeatures2d.hpp>
+//#include <opencv2/xfeatures2d.hpp>
 #include <opencv2/features2d.hpp> 
 
 // Boost

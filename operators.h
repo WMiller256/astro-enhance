@@ -23,7 +23,9 @@ std::pair<double, double> operator-(const std::pair<double, double> &l, const st
 std::pair<double, double> operator+(const std::pair<double, double> &l, const std::pair<double, double> &r);
 std::vector<std::pair<double, double>> operator-(const std::vector<std::pair<double, double>> &l, const std::pair<double, double> &r);
 
+cv::Size operator * (cv::Size l, double r);
+
 // Not technically operators but definitely belong here
-double fetch_add(std::atomic<double>* shared, const double &h);
+void fetch_add(std::atomic<double>* shared, const double &h);
 double diff(const std::vector<std::pair<double, double>> &l, const std::vector<std::pair<double, double>> &r);
 double distance(const std::pair<double, double> &l, const std::pair<double, double> &r);

@@ -1,9 +1,7 @@
 
 #include "enhance.h"
 
-double star_threshold;
 std::string mode;
-long nn;
 
 int main(int argn, char** argv) {
 	std::vector<std::string> files;
@@ -11,10 +9,8 @@ int main(int argn, char** argv) {
    	po::options_description description("Usage");
 	try {
 		description.add_options()
-			("input,i", po::value<std::vector<std::string> >()->multitoken(), "The images on which to perform the subtraction.")
+			("input,i", po::value<std::vector<std::string> >()->multitoken(), "The images on which to perform the operation.")
 			("mode,m", po::value<std::string>(&mode)->default_value("frames"), "The processing mode to use, either {frames} if the inputs are image files or {video} if they are video files.")
-			("nn", po::value<long>(&nn)->default_value(0), "The nearest-neighbor depth to use.")
-			("threshold,t", po::value<double>(&star_threshold)->default_value(0.995), "The relative brightness threshold to use in stellar extraction.")
 		;
 	}
 	catch (...) {

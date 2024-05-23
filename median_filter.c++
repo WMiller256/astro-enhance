@@ -22,6 +22,7 @@ int main(int argn, char** argv) {
     size_t kernel;
     long smoothing;
     long jitter;
+    double filter_strength;
 
    	po::options_description description("Usage");
 
@@ -37,6 +38,7 @@ int main(int argn, char** argv) {
 			                                                               " of the rolling average to use)")
 			("jitter,j", po::value<long>(&jitter)->default_value(0), "Jitter to apply to filter chunking, to prevent co-incident chunk boundaries"
 			                                                         " in an image stack.")
+			("filter_strength,f", po::value<double>(&filter_strength)->default_value(0.8), "Strength of the median filter, [0.0, 1.0]. Default 0.8.")
 		;
 	}
 	catch (...) {
@@ -75,7 +77,7 @@ int main(int argn, char** argv) {
     std::atomic<int> progress(0);
     #pragma omp parallel for schedule(dynamic)
 	for (int ii = 0; ii < images.size(); ii ++) {
-        cv::Mat subtracted = median_filter(images[ii], fmode, norm, stretch, kernel, smoothing, jitter);
+        cv::Mat subtracted = median_filter(images[ii], fmode, norm, stretch, kernel, smoothing, jitter, filter_strength);
 
         fs::path path(files[ii]);
         cv::imwrite(path.replace_filename(path.stem().string()+"_msub"+path.extension().string()), subtracted);

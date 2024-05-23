@@ -39,27 +39,25 @@ cv::Mat star_trail(const std::vector<cv::Mat> images) {
     int rows = images[0].rows;
     int cols = images[0].cols;
 
-    cv::Mat m(rows, cols, CV_64FC3);                                 // Create an image initialized to 0's to hold the location of stars
-    m.setTo(cv::Scalar(0,0,0,0));
-    cv::Mat color_mat;
-    uchar max_intensity = find_max(images);
+    cv::Mat image(rows, cols, CV_64FC3);                                 // Create an image initialized to 0's to hold the location of stars
+    image.setTo(cv::Scalar(0, 0, 0, 0));
+    cv::Mat layer;
 
-    std::cout << "Finding star trails..." << std::endl;
+    std::cout << "Accumulating star trails..." << std::endl;
     for (size_t img = 0; img < images.size(); ++img) {                 // Loop through every image in the vector {images}
-        images[img].convertTo(color_mat, CV_64FC3);
-        cv::Mat stars = brightness_find_legacy(color_mat, max_intensity);
+        images[img].convertTo(layer, CV_64FC3);
 
-        // Once the stars have been found, combine the star masks
-        cv::Vec3b* star = stars.ptr<cv::Vec3b>(0, 0);
-        cv::Vec3b* im = m.ptr<cv::Vec3b>(0, 0);
-        for (size_t rc = 0; rc < m.rows * m.cols; rc++, star++, im++) {
-            if (brightness(*star) > brightness(*im)) {
-                *im = *star;
+        // Apply the 'lighten-only' filter
+        cv::Vec3b* layer_pixel = layer.ptr<cv::Vec3b>(0, 0);
+        cv::Vec3b* image_pixel = image.ptr<cv::Vec3b>(0, 0);
+        for (size_t rc = 0; rc < image.rows * image.cols; rc++, layer_pixel++, image_pixel++) {
+            if (brightness(*layer_pixel) > brightness(*image_pixel)) {
+                *image_pixel = *layer_pixel;
             }
         }
         print_percent(img, images.size());
     }
-    return m;
+    return image;
 }
 
 cv::Mat brightness_find(const cv::Mat &_image, const size_t z) {

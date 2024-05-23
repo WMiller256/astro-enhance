@@ -452,7 +452,7 @@ void _blob_extract(const cv::Mat &mask, Blob &blob, uchar* pixel, uchar* start) 
 }
 
 cv::Mat median_filter(const cv::Mat &image, const FilterMode mode, const bool norm, const bool stretch, 
-                      const size_t _kernel, const long smoothing, const long jitter) {
+                      const size_t _kernel, const long smoothing, const long jitter, const double filter_strength) {
     cv::Mat out(image.rows, image.cols, image.type());
     const size_t nb = image.channels();
 
@@ -469,7 +469,8 @@ cv::Mat median_filter(const cv::Mat &image, const FilterMode mode, const bool no
 
                 uchar* pixel = out.ptr(0, 0) + b;
                 for (size_t rc = 0; rc < channel.total(); rc ++, pixel += nb) {
-                    *pixel = channel.data[rc] > chunk.median ? channel.data[rc] - chunk.median : 0;
+                    double filter = chunk.median * filter_strength;
+                    *pixel = channel.data[rc] > filter ? channel.data[rc] - filter : 0;
                 }
             }
         }

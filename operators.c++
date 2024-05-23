@@ -25,12 +25,8 @@ std::ostream& operator<<(std::ostream &os, const cv::Vec3b &v) {
 	return os;
 }
 
-std::pair<double, double> operator+(const std::pair<double, double> &l, const double &r) {
-	return std::make_pair(std::get<0>(l) + r, std::get<1>(l) + r);
-}
-std::pair<double, double> operator+(const double &l, const std::pair<double, double> &r) {
-	return std::make_pair(std::get<0>(r) + l, std::get<1>(r) + l);
-}
+std::pair<double, double> operator+(const std::pair<double, double> &l, const double &r) { return std::make_pair(std::get<0>(l) + r, std::get<1>(l) + r); }
+std::pair<double, double> operator+(const double &l, const std::pair<double, double> &r) { return std::make_pair(std::get<0>(r) + l, std::get<1>(r) + l); }
 
 std::pair<double, double> operator-(const std::pair<double, double> &l, const std::pair<double, double> &r) {
 	return std::make_pair(std::get<0>(l) - std::get<0>(r), std::get<1>(l) - std::get<1>(r));
@@ -46,8 +42,10 @@ std::vector<std::pair<double, double>> operator-(const std::vector<std::pair<dou
 	return result;
 }
 
+cv::Size operator * (cv::Size l, double r) { return cv::Size(l.width * r, l.height * r); }
+
 // Current standard does not fully support atomic double
-double fetch_add(std::atomic<double>* shared, const double &h) {
+void fetch_add(std::atomic<double>* shared, const double &h) {
 	double expected = shared->load();
 	while (!atomic_compare_exchange_weak(shared, &expected, expected + h))
 		;

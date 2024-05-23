@@ -1,12 +1,12 @@
 
 #pragma once
 
-#include <colors.h>
 #include <ctime>
 #include <iostream>
 #include <iomanip>
 #include <string>
 
+#include "colors.h"
 #include "enhance.h"
 
 const std::string backspace({8, 8, 8, 8});
