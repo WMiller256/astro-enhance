@@ -62,7 +62,7 @@ int main(int argn, char** argv) {
     int status;
 
     // Do the motion interpolation
-    sys("ffmpeg -i "+file+" -y -c:v libx265 -crf 18 -vf \"minterpolate='fps="+
+    sys("ffmpeg -i "+file+" -y -c:v hevc_nvenc -rc:v vbr -cq:v 18 -vf \"minterpolate='fps="+
            std::to_string(fps)+":mi_mode=mci:mc_mode=aobmc:vsbmc=1:me_mode=bidir"+
            ":search_param="+std::to_string(search)+":mb_size="+std::to_string(mb)+
            "'\" out.mp4");
@@ -71,7 +71,7 @@ int main(int argn, char** argv) {
         // Create side-by-side preview
         sys("ffmpeg -i "+file+" -i out.mp4 -y -filter_complex \"[0:v] fps="+
              std::to_string(fps)+" [A]; [1:v] fps="+std::to_string(fps)+
-             " [B]; [A][B]hstack=inputs=2\" -c:v libx265 comp.mp4");
+             " [B]; [A][B]hstack=inputs=2\" -c:v hevc_nvenc comp.mp4");
         sys(std::string("ffplay -i comp.mp4 -loop 0"));   // Show the preview
         sys("rm comp.mp4");    
     }

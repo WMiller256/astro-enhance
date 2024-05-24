@@ -34,13 +34,12 @@ std::vector<cv::Mat> read_images(std::vector<std::string> files) { // Read the i
     return images;                                                   // Then return the [cv::Mat] vector of images
 }
 
-cv::Mat star_trail(const std::vector<cv::Mat> images) {
+cv::Mat star_trail(const std::vector<cv::Mat> images, const uint threshold) {
     if (images.empty()) return cv::Mat();                            // If the images list is empty, return an empty cv::Mat object
     int rows = images[0].rows;
     int cols = images[0].cols;
 
-    cv::Mat image(rows, cols, CV_8UC3);                                 // Create an image initialized to 0's to hold the location of stars
-    image.setTo(cv::Scalar(0, 0, 0, 0));
+    cv::Mat image = coadd(images);
     cv::Mat layer;
 
     std::cout << "Accumulating star trails..." << std::endl;
@@ -51,7 +50,7 @@ cv::Mat star_trail(const std::vector<cv::Mat> images) {
         cv::Vec3b* layer_pixel = layer.ptr<cv::Vec3b>(0, 0);
         cv::Vec3b* image_pixel = image.ptr<cv::Vec3b>(0, 0);
         for (size_t rc = 0; rc < image.rows * image.cols; rc++, layer_pixel++, image_pixel++) {
-            if (brightness(*layer_pixel) > brightness(*image_pixel)) {
+            if (brightness(*layer_pixel) > threshold && brightness(*layer_pixel) > brightness(*image_pixel)) {
                 *image_pixel = *layer_pixel;
             }
         }

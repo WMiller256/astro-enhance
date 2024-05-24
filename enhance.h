@@ -89,21 +89,21 @@ std::vector<cv::Mat> read_images(std::vector<std::string> files);              /
 
 //     Videos
 std::vector<cv::Mat> extract_frames(std::vector<std::string> files);           // Extract the frames from a video file into frames in a 
-                                                                                 // vector of [Mat] objects
+                                                                               // vector of [Mat] objects
 std::vector<cv::Mat> read_video(std::vector<std::string> videos);              // Extract the frames from a video using FFMPEG library
 
 // Main methods
 cv::Mat4b advanced_coadd(const std::vector<cv::Mat> images,                    // Selective coadd ignoring pixels with brightness 
-                                 double threshold = 0.3);                        // below {max_intensity}*{threshold}
-cv::Mat star_trail(const std::vector<cv::Mat> images);                       // Find star trails from {images} and return a composite with
+                                 double threshold = 0.3);                      // below {max_intensity}*{threshold}
+cv::Mat star_trail(const std::vector<cv::Mat> images, const uint threshold=0); // Find star trails from {images} and return a composite with
+                                                                               // star trails stacked on coadded image
 cv::Mat depollute(cv::Mat &images, const size_t size = 50, 
                   const size_t z=8, const FindBy find = FindBy::gaussian);
-                                                                                 // star trails stacked on coadded image
 
 // Star position retrieval etc
 cv::Mat brightness_find(const cv::Mat &_image, const size_t z=8);
-cv::Mat brightness_find_legacy(const cv::Mat &image, uchar max_intensisty,   // Finds stars in {image} based on relative brightness, 
-                     int nn = 0, double star_threshold = 0.995);                 // returning a [Mat] mask of stars |LEGACY|
+cv::Mat brightness_find_legacy(const cv::Mat &image, uchar max_intensisty,     // Finds stars in {image} based on relative brightness, 
+                     int nn = 0, double star_threshold = 0.995);               // returning a [Mat] mask of stars |LEGACY|
 cv::Mat gaussian_find(const cv::Mat &_image, long w, size_t z=8);              // Find stars by 2D Gaussian fitting
 Chunk gaussian_estimate(const uchar* pixel, const size_t &cols, const Extent &e);
 std::vector<std::pair<double, double>> star_positions(const cv::Mat &image, 
@@ -113,6 +113,6 @@ Eigen::MatrixXd depollute_region(cv::Mat &image, const cv::Mat &stars, const lon
                                  const long &c, const int &b, const size_t &size);
 
 // Intensity assessment
-uchar find_max(std::vector<cv::Mat> images);                                   // Find the brightest pixel in {images}
-int brightness(const cv::Vec3b& input);                                          // Find the brightness value of the given 3 channel pixel
-bool brighter_than(cv::Vec4b pixel, double threshold);                           // Evaluates if a given pixel is above a brightness threshold
+uchar find_max(std::vector<cv::Mat> images);                                    // Find the brightest pixel in {images}
+int brightness(const cv::Vec3b& input);                                         // Find the brightness value of the given 3 channel pixel
+bool brighter_than(cv::Vec4b pixel, double threshold);                          // Evaluates if a given pixel is above a brightness threshold

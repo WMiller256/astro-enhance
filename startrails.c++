@@ -1,16 +1,22 @@
 
 #include "enhance.h"
 
-std::string mode;
 
 int main(int argn, char** argv) {
 	std::vector<std::string> files;
+    std::string mode;
+    uint threshold; 
 
    	po::options_description description("Usage");
 	try {
 		description.add_options()
 			("input,i", po::value<std::vector<std::string> >()->multitoken(), "The images on which to perform the operation.")
-			("mode,m", po::value<std::string>(&mode)->default_value("frames"), "The processing mode to use, either {frames} if the inputs are image files or {video} if they are video files.")
+			("mode,m", po::value<std::string>(&mode)->default_value("frames"), "The processing mode to use, either {frames} if the "
+			                                                                   "inputs are image files or {video} if they are video "
+			                                                                   "files. Optional.")
+			("threshold,t", po::value<uint>(&threshold)->default_value(0), "The brightness threshold below which pixels will use the " 
+			                                                               "mean value instead of lightest value during accumulation "
+			                                                               "[0-255]. Optional.")
 		;
 	}
 	catch (...) {
@@ -36,12 +42,12 @@ int main(int argn, char** argv) {
 
 	if (mode == "frames") {	
 		std::vector<cv::Mat> images = read_images(files);
-		cv::Mat star_trails = star_trail(images);
+		cv::Mat star_trails = star_trail(images, threshold);
 		imwrite("./composite.tif", star_trails);
 	}
 	else if (mode == "video") {
 		std::vector<cv::Mat> frames = extract_frames(files);
-		cv::Mat star_trails = star_trail(frames);
+		cv::Mat star_trails = star_trail(frames, threshold);
 		std::cout << green+bright+" done"+res+"." << std::endl;
 		star_trails.convertTo(star_trails, CV_8UC3);
 		imshow("Image", star_trails);
