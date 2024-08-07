@@ -89,7 +89,7 @@ cv::Mat coadd(const std::vector<cv::Mat> &images) {
     // Workaround of m[0].convertTo(...) instead of out.convertTo(...) is
     // inefficient (discards threading advantages).
     for (auto e : m) out += e;                        // Accumulate the arrays from the threads into a single array
-    m[0].convertTo(out, CV_8U, 1. / images.size()); // Convert back to CV_8UC3 type, applying the division to get the actual mean
+    m[0].convertTo(out, CV_8U, 1. / images.size()); // Convert back to CV_8U type, applying the division to get the actual mean
     std::cout << bright+green+"done"+res+"." << std::endl;
     
     return out;
@@ -455,6 +455,11 @@ cv::Mat median_filter(const cv::Mat &image, const FilterMode mode, const bool no
                       const size_t _kernel, const long smoothing, const long jitter, const double filter_strength) {
     cv::Mat out(image.rows, image.cols, image.type());
     const size_t nb = image.channels();
+
+    // TODO Implement rolling-window filtering for row, column, and local filtering.
+    //      Calculate the median in each kernel, and add 1 / kernel_size * median to 
+    //      a running total. Subtract the running total at the end for smooth median
+    //      subtraction. 
 
     std::mt19937 gen;
     std::uniform_int_distribution<> jitterer = prng((_kernel - 1) < jitter ? -jitter : -(_kernel - 1), jitter, gen);

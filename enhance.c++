@@ -47,8 +47,8 @@ cv::Mat star_trail(const std::vector<cv::Mat> images, const uint threshold) {
         images[img].convertTo(layer, CV_8UC3);
 
         // Apply the 'lighten-only' filter
-        cv::Vec3b* layer_pixel = layer.ptr<cv::Vec3b>(0, 0);
-        cv::Vec3b* image_pixel = image.ptr<cv::Vec3b>(0, 0);
+        auto* layer_pixel = layer.ptr<cv::Vec3b>(0, 0);
+        auto* image_pixel = image.ptr<cv::Vec3b>(0, 0);
         for (size_t rc = 0; rc < image.rows * image.cols; rc++, layer_pixel++, image_pixel++) {
             if (brightness(*layer_pixel) > threshold && brightness(*layer_pixel) > brightness(*image_pixel)) {
                 *image_pixel = *layer_pixel;
