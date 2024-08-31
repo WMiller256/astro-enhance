@@ -452,20 +452,57 @@ void _blob_extract(const cv::Mat &mask, Blob &blob, uchar* pixel, uchar* start) 
 }
 
 cv::Mat median_filter(const cv::Mat &image, const FilterMode mode, const bool norm, const bool stretch, 
-                      const size_t _kernel, const long smoothing, const long jitter, const double filter_strength) {
+                      const size_t _kernel, const long smoothing, const long jitter, const double filter_strength,
+                      const long stepsize) {
     cv::Mat out(image.rows, image.cols, image.type());
     const size_t nb = image.channels();
 
-    // TODO Implement rolling-window filtering for row, column, and local filtering.
-    //      Calculate the median in each kernel, and add 1 / kernel_size * median to 
-    //      a running total. Subtract the running total at the end for smooth median
-    //      subtraction. 
-
     std::mt19937 gen;
     std::uniform_int_distribution<> jitterer = prng((_kernel - 1) < jitter ? -jitter : -(_kernel - 1), jitter, gen);
-    size_t kernel = _kernel + jitterer(gen);
+    size_t kernel = jitter > 0 ? _kernel + jitterer(gen) : _kernel;
 
-    if (mode == FilterMode::global) {
+    // TODO Update rol, col, row-col, and col-row options to use the 
+    //      same method as rolling. 
+    if (mode == FilterMode::rolling) {
+        cv::Mat weights(image.rows, image.cols, CV_16UC1);
+        cv::Mat mask(image.rows, image.cols, CV_64FC1);
+        weights.setTo(cv::Scalar::all(0));
+        mask.setTo(cv::Scalar::all(0.0));
+        #pragma omp parallel for schedule(dynamic)
+        for (long r = 0; r <= image.rows - kernel; r += stepsize) {
+            for (long c = 0; c <= image.cols - kernel; c += stepsize) {
+                Chunk chunk = gaussian_estimate(image.ptr(0, 0), image.cols, Extent { c, std::min(c + (long)kernel, (long)image.cols - 1), 
+                                                                                      r, std::min(r + (long)kernel, (long)image.rows - 1) });
+//                std::cout << "Chunk from (" << r << ", " << c << ") to (" << r + kernel << ", " << c + kernel << ") median of " << chunk.median << std::endl;
+                #pragma omp critical
+                for (int _r = r; _r < r + kernel; _r ++) {
+                    for (int _c = c; _c < c + kernel; _c ++) {
+                        mask.at<double>(_r, _c) += chunk.median;
+                        weights.at<ushort>(_r, _c) += 1;
+                    }
+                }
+            }
+            print_percent(r, image.rows - kernel);
+        }
+        print_percent(image.rows - 1, image.rows);
+
+        weights.convertTo(weights, CV_64FC1);
+        mask /= weights;
+        int ksize = kernel / 2 + (1 - (kernel / 2) % 2); // ksize must be odd
+        cv::GaussianBlur(mask, mask, cv::Size(ksize, ksize), 0, 0);
+
+        for (int r = 0; r < image.rows; r ++) {
+            for (int c = 0; c < image.cols; c ++) {
+                for (int b = 0; b < nb; b ++) {
+                    *(out.ptr(r, c) + b) = std::max(*(image.ptr(r, c) + b) - (uchar)(mask.at<double>(r, c) * filter_strength), 0);
+                }
+            }
+        }
+
+        mask.convertTo(mask, CV_16UC1, 256);
+        cv::imwrite("mask.tif", mask);
+    } 
+    else if (mode == FilterMode::global) {
         if (norm) {
             for (int b = 0; b < nb; b ++) {
                 cv::Mat channel(image.rows, image.cols, CV_8UC1);

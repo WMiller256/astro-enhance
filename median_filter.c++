@@ -22,6 +22,7 @@ int main(int argn, char** argv) {
     size_t kernel;
     long smoothing;
     long jitter;
+    long stepsize;
     double filter_strength;
 
    	po::options_description description("Usage");
@@ -39,6 +40,7 @@ int main(int argn, char** argv) {
 			("jitter,j", po::value<long>(&jitter)->default_value(0), "Jitter to apply to filter chunking, to prevent co-incident chunk boundaries"
 			                                                         " in an image stack.")
 			("filter_strength,f", po::value<double>(&filter_strength)->default_value(0.8), "Strength of the median filter, [0.0, 1.0]. Default 0.8.")
+			("step,s", po::value<long>(&stepsize)->default_value(50), "The step size to use between rolling windows.")
 		;
 	}
 	catch (...) {
@@ -67,6 +69,7 @@ int main(int argn, char** argv) {
 	else if (mode == "col") fmode = FilterMode::col;
 	else if (mode == "rowcol") fmode = FilterMode::rowcol;
 	else if (mode == "colrow") fmode = FilterMode::colrow;
+	else if (mode == "rolling") fmode = FilterMode::rolling;
 
 	norm = vm["normalize"].as<bool>();
 	stretch = vm["stretch"].as<bool>();
@@ -75,9 +78,9 @@ int main(int argn, char** argv) {
 
     std::cout << "Performing " << mode << " median filtering... " << std::endl;
     std::atomic<int> progress(0);
-    #pragma omp parallel for schedule(dynamic)
+//    #pragma omp parallel for schedule(dynamic)
 	for (int ii = 0; ii < images.size(); ii ++) {
-        cv::Mat subtracted = median_filter(images[ii], fmode, norm, stretch, kernel, smoothing, jitter, filter_strength);
+        cv::Mat subtracted = median_filter(images[ii], fmode, norm, stretch, kernel, smoothing, jitter, filter_strength, stepsize);
 
         fs::path path(files[ii]);
         cv::imwrite(path.replace_filename(path.stem().string()+"_msub"+path.extension().string()), subtracted);

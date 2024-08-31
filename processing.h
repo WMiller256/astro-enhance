@@ -12,7 +12,7 @@
 #include "enhance.h"
 #include "chunk.h"
 
-enum class FilterMode {global, row, col, rowcol, colrow};
+enum class FilterMode {global, row, col, rowcol, colrow, rolling};
 
 void accumulate(const std::vector<cv::Mat> images, cv::Mat &m, const size_t &n);
 void subtract(const std::vector<std::string> files, 
@@ -38,6 +38,6 @@ void _blob_extract(const cv::Mat &mask, Blob &blob, uchar* pixel, uchar* start);
 
 cv::Mat median_filter(const cv::Mat &image, const FilterMode mode=FilterMode::global, const bool norm=false, 
                       const bool stretch=false, const size_t kernel=10, const long smoothing=0, const long jitter=0,
-                      const double filter_strength=0.8);
+                      const double filter_strength=0.8, const long stepsize=50);
 void normalize(cv::Mat &image, const double &c);
 void smooth_median(std::vector<Chunk> &chunks, const long smoothing);
