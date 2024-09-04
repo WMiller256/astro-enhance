@@ -454,7 +454,7 @@ void _blob_extract(const cv::Mat &mask, Blob &blob, uchar* pixel, uchar* start) 
 cv::Mat median_filter(const cv::Mat &image, const FilterMode mode, const bool norm, const bool stretch, 
                       const size_t _kernel, const long smoothing, const long jitter, const double filter_strength,
                       const long stepsize) {
-    cv::Mat out(image.rows, image.cols, image.type());
+    cv::Mat out(image.rows, image.cols, CV_64FC3);
     const size_t nb = image.channels();
 
     std::mt19937 gen;
@@ -469,16 +469,24 @@ cv::Mat median_filter(const cv::Mat &image, const FilterMode mode, const bool no
         weights.setTo(cv::Scalar::all(0));
         mask.setTo(cv::Scalar::all(0.0));
         #pragma omp parallel for schedule(dynamic)
-        for (long r = 0; r <= image.rows - kernel; r += stepsize) {
-            for (long c = 0; c <= image.cols - kernel; c += stepsize) {
-                Chunk chunk = gaussian_estimate(image.ptr(0, 0), image.cols, Extent { c, std::min(c + (long)kernel, (long)image.cols - 1), 
-                                                                                      r, std::min(r + (long)kernel, (long)image.rows - 1) });
-//                std::cout << "Chunk from (" << r << ", " << c << ") to (" << r + kernel << ", " << c + kernel << ") median of " << chunk.median << std::endl;
+        for (long r = 0; r + kernel < image.rows + stepsize; r += stepsize) {
+            for (long c = 0; c + kernel < image.cols + stepsize; c += stepsize) {
                 #pragma omp critical
-                for (int _r = r; _r < r + kernel; _r ++) {
-                    for (int _c = c; _c < c + kernel; _c ++) {
-                        mask.at<double>(_r, _c) += chunk.median;
-                        weights.at<ushort>(_r, _c) += 1;
+                if (jitter) {
+                    kernel = _kernel + jitterer(gen);
+                }
+                
+                Extent e({ c, std::min(c + (long)kernel, (long)image.cols - 1), std::min(r + (long)kernel, (long)image.rows - 1), r });
+//                std::cout << "Chunk from (" << e.l << ", " << e.t << ") to (" << e.r << ", " << e.b << ") median of " << std::flush;
+                Chunk chunk = gaussian_estimate(image, e);
+//                std::cout << chunk.median << std::endl;
+                for (int _r = r; _r < std::min(r + (long)kernel, (long)image.rows); _r ++) {
+                    for (int _c = c; _c < std::min(c + (long)kernel, (long)image.cols); _c ++) {
+                        #pragma omp critical
+                        {
+                            mask.at<double>(_r, _c) += chunk.median;
+                            weights.at<ushort>(_r, _c) += 1;
+                        }
                     }
                 }
             }
@@ -488,26 +496,29 @@ cv::Mat median_filter(const cv::Mat &image, const FilterMode mode, const bool no
 
         weights.convertTo(weights, CV_64FC1);
         mask /= weights;
-        int ksize = kernel / 2 + (1 - (kernel / 2) % 2); // ksize must be odd
+        cv::Mat fimage(image.rows, image.cols, CV_64FC3);
+        image.convertTo(fimage, CV_64FC3);
+        int ksize = _kernel / 2 + (1 - (_kernel / 2) % 2); // ksize must be odd
         cv::GaussianBlur(mask, mask, cv::Size(ksize, ksize), 0, 0);
 
         for (int r = 0; r < image.rows; r ++) {
             for (int c = 0; c < image.cols; c ++) {
                 for (int b = 0; b < nb; b ++) {
-                    *(out.ptr(r, c) + b) = std::max(*(image.ptr(r, c) + b) - (uchar)(mask.at<double>(r, c) * filter_strength), 0);
+                    out.at<cv::Vec3d>(r, c)[b] = (double)std::max(fimage.at<cv::Vec3d>(r, c)[b] - mask.at<double>(r, c) * filter_strength, 0.0);
                 }
             }
         }
 
-        mask.convertTo(mask, CV_16UC1, 256);
+        mask.convertTo(mask, CV_16FC1, 1/(std::pow(2, image.elemSize() * 8 / nb)));
         cv::imwrite("mask.tif", mask);
+        out.convertTo(out, CV_16UC3, 65536.0/(std::pow(2, image.elemSize() * 8 / nb)));
     } 
     else if (mode == FilterMode::global) {
         if (norm) {
             for (int b = 0; b < nb; b ++) {
                 cv::Mat channel(image.rows, image.cols, CV_8UC1);
                 cv::extractChannel(image, channel, b);
-                Chunk chunk = gaussian_estimate(channel.ptr(0, 0), channel.cols, Extent { 0, channel.cols, 0, channel.rows });
+                Chunk chunk = gaussian_estimate(channel, Extent { 0, channel.cols, 0, channel.rows });
 
                 uchar* pixel = out.ptr(0, 0) + b;
                 for (size_t rc = 0; rc < channel.total(); rc ++, pixel += nb) {
@@ -517,7 +528,7 @@ cv::Mat median_filter(const cv::Mat &image, const FilterMode mode, const bool no
             }
         }
         else {
-            Chunk chunk = gaussian_estimate(image.ptr(0, 0), image.cols, Extent { 0, image.cols, 0, image.rows });
+            Chunk chunk = gaussian_estimate(image, Extent { 0, image.cols, 0, image.rows });
             uchar* pixel = out.ptr(0, 0);
             for (size_t rc = 0; rc < image.rows * image.cols * nb; rc ++, pixel ++) {
                 *pixel = image.data[rc] > chunk.median ? image.data[rc] - chunk.median : 0;
@@ -533,7 +544,7 @@ cv::Mat median_filter(const cv::Mat &image, const FilterMode mode, const bool no
             std::vector<size_t> kernels;
 
             for (long r = 0; r < channel.rows; r += kernel) {
-                chunks.push_back(gaussian_estimate(channel.ptr(r, 0), channel.cols, Extent { 0, channel.cols, 0, (kernel + r < channel.rows ? (long)kernel : channel.rows - r) }));
+                chunks.push_back(gaussian_estimate(channel, Extent { 0, channel.cols, 0, (kernel + r < channel.rows ? (long)kernel : channel.rows - r) }));
                 kernel = _kernel + jitterer(gen);
                 kernels.push_back(kernel);
             }
@@ -556,7 +567,7 @@ cv::Mat median_filter(const cv::Mat &image, const FilterMode mode, const bool no
             std::vector<size_t> kernels;
             
             for (long c = 0; c < channel.cols; c += kernel) {
-                chunks.push_back(gaussian_estimate(channel.ptr(0, c), channel.cols, Extent { 0, (kernel + c < channel.cols ? (long)kernel : channel.cols - c), 0, channel.rows }));
+                chunks.push_back(gaussian_estimate(channel, Extent { 0, (kernel + c < channel.cols ? (long)kernel : channel.cols - c), 0, channel.rows }));
                 kernel = _kernel + jitterer(gen);
                 kernels.push_back(kernel);
             }    

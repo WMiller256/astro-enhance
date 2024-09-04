@@ -67,7 +67,7 @@ cv::Mat brightness_find(const cv::Mat &_image, const size_t z) {
     
     // Retrieve statistical information from entire image
     std::cout << "Retrieving image-wide statistics... " << std::flush;
-    Chunk chunk = gaussian_estimate(image.ptr(0, 0), image.cols, Extent { 0, image.cols, 0, image.rows });
+    Chunk chunk = gaussian_estimate(image, Extent { 0, image.cols, 0, image.rows });
     std::cout << bright+green+"done"+res+"." << std::endl;
 
     // Iterate over the image using pointer arithmetic
@@ -144,8 +144,8 @@ cv::Mat gaussian_find(const cv::Mat &_image, long w, size_t z) {
     for (long r = 0; r < _rows; r ++, pixel += dw * (image.cols -  _cols)) {    // Have to iterate {pixel} on both loops to account for the y-dimension of the chunks
         print_percent(r, _rows);
         for (long c = 0; c < _cols; c ++, pixel += dw) {
-            chunks(r, c) = gaussian_estimate(pixel, image.cols, Extent {(c * dw - w > 0 ? w : c * dw), (c * dw + w < image.cols ? w : image.cols - c * dw - 1),
-                                                                        (r * dw - w > 0 ? w : r * dw), (r * dw + w < image.rows ? w : image.rows - r * dw - 1)});
+            chunks(r, c) = gaussian_estimate(image, Extent {(c * dw - w > 0 ? w : c * dw), (c * dw + w < image.cols ? w : image.cols - c * dw - 1),
+                                                            (r * dw - w > 0 ? w : r * dw), (r * dw + w < image.rows ? w : image.rows - r * dw - 1)});
             chunks(r, c).pos = Pos {r, c};
         }
     }
@@ -176,30 +176,41 @@ cv::Mat gaussian_find(const cv::Mat &_image, long w, size_t z) {
     
     return out;
 }
-Chunk gaussian_estimate(const uchar* pixel, const size_t &cols, const Extent &e) {
+Chunk gaussian_estimate(const cv::Mat &image, const Extent &e) {
 // Get the mean and variance of a region of interest (ROI) determined by the bandwidth in [gaussian_find]
     Chunk chunk(e);
 
+    if (e.l < 0) throw "Extent.left must be > 0, got "+std::to_string(e.l);
+    if (e.r > image.cols) throw "Extent.right must be < "+std::to_string(image.cols)+", got "+std::to_string(e.r);
+    if (e.t < 0) throw "Extent.top must be > 0, got "+std::to_string(e.t);
+    if (e.b > image.rows) throw "Extent.bottom must be < "+std::to_string(image.rows)+", got "+std::to_string(e.b);
+
     // Find the mean and median brightness of the region of interest (ROI)
     std::vector<double> pixels;
-    for (long _r = -e.b; _r < e.t; _r++) {
-        for (long _c = -e.l; _c < e.r; _c++) { 
-            chunk.mean += *(pixel + _c + _r * cols);
-            chunk.n ++; // Accumulate instead of calculating because center-defined Extents would have off-by-one otherwise
-            
-            pixels.push_back((double)*(pixel + _c + _r * cols));
+    for (long r = e.t; r < e.b; r++) {
+        for (long c = e.l; c < e.r; c++) { 
+            for (long b = 0; b < image.channels(); b ++) {
+                chunk.mean += (double)*(image.ptr(r, c) + b);
+                chunk.n ++; // Accumulate instead of calculating because center-defined Extents would have off-by-one otherwise
+                
+                pixels.push_back((double)*(image.ptr(r, c) + b));
+            }
         }
     }
     chunk.mean /= chunk.n;
     chunk.median = median(pixels);
 
     // Find the standard deviation of the region of interest (ROI)
-    for (long _r = -e.b; _r < e.t; _r++) {
-        for (long _c = -e.l; _c < e.r; _c++) chunk.std += abs(*(pixel + _c + _r * cols) - chunk.mean);
+    for (long r = -e.b; r < e.t; r++) {
+        for (long c = -e.l; c < e.r; c++) {
+            for (long b = 0; b < image.channels(); b ++) {
+                chunk.std += abs(*(image.ptr(r, c) + b) - chunk.mean);
+            }
+        }
     }
     chunk.std /= chunk.n;
     chunk.var = std::pow(chunk.std, 2);
-    chunk.n;
+    chunk.n /= image.channels();
 
     return chunk;
 }

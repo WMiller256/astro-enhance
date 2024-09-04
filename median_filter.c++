@@ -35,7 +35,7 @@ int main(int argn, char** argv) {
 			("stretch", po::bool_switch()->default_value(false), "Whether or not to stretch the output to cover maximum brightness range")
 			("kernel,k", po::value<size_t>(&kernel)->default_value(10), "The kernel to use when filtering, i.e. the size of the region to sample"
 			                                                            " for each iteration of the filter. Does not apply to filtering mode 'global'")
-			("smoothing,s", po::value<long>(&smoothing)->default_value(0), "The smoothing factor for row and column based filtering. (The size"
+			("smoothing", po::value<long>(&smoothing)->default_value(0), "The smoothing factor for row and column based filtering. (The size"
 			                                                               " of the rolling average to use)")
 			("jitter,j", po::value<long>(&jitter)->default_value(0), "Jitter to apply to filter chunking, to prevent co-incident chunk boundaries"
 			                                                         " in an image stack.")

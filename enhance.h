@@ -105,7 +105,7 @@ cv::Mat brightness_find(const cv::Mat &_image, const size_t z=8);
 cv::Mat brightness_find_legacy(const cv::Mat &image, uchar max_intensisty,     // Finds stars in {image} based on relative brightness, 
                      int nn = 0, double star_threshold = 0.995);               // returning a [Mat] mask of stars |LEGACY|
 cv::Mat gaussian_find(const cv::Mat &_image, long w, size_t z=8);              // Find stars by 2D Gaussian fitting
-Chunk gaussian_estimate(const uchar* pixel, const size_t &cols, const Extent &e);
+Chunk gaussian_estimate(const cv::Mat &image, const Extent &e);
 std::vector<std::pair<double, double>> star_positions(const cv::Mat &image, 
                                                       const size_t &n = 100);
 
